@@ -137,6 +137,81 @@
         .footer-socials a:hover { background: #c9a961; color: #1e3a5f; }
         .copyright { padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: #6b7785; }
         
+        /* ========== COOKIE БАННЕР ========== */
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e3a5f;
+            color: #fff;
+            padding: 25px 30px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+            z-index: 9999;
+            display: none;
+            animation: slideUp 0.4s ease-out;
+        }
+        .cookie-banner.show { display: block; }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .cookie-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 30px;
+        }
+        .cookie-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #d0d8e0;
+        }
+        .cookie-text strong {
+            color: #c9a961;
+            font-weight: 600;
+        }
+        .cookie-buttons {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .cookie-btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cookie-btn-accept {
+            background: #c9a961;
+            color: #1e3a5f;
+        }
+        .cookie-btn-accept:hover {
+            background: #b8985a;
+            transform: translateY(-2px);
+        }
+        .cookie-btn-details {
+            background: transparent;
+            color: #c9a961;
+            border: 2px solid #c9a961;
+        }
+        .cookie-btn-details:hover {
+            background: rgba(201,169,97,0.1);
+        }
+        
         /* ========== ПЛАНШЕТ (до 968px) ========== */
         @media (max-width: 968px) {
             nav { padding: 12px 0; }
@@ -190,6 +265,12 @@
             
             .contact-grid { grid-template-columns: 1fr; gap: 34px; }
             .contact-form { padding: 30px 24px; }
+            
+            .cookie-banner { padding: 20px; }
+            .cookie-content { flex-direction: column; gap: 20px; }
+            .cookie-text { font-size: 13px; }
+            .cookie-buttons { width: 100%; }
+            .cookie-btn { flex: 1; }
         }
         
         /* ========== СМАРТФОН (до 640px) ========== */
@@ -270,6 +351,10 @@
             footer p { font-size: 12px; }
             .footer-socials { gap: 10px; margin: 16px 0; }
             .copyright { padding-top: 16px; font-size: 11px; }
+            
+            .cookie-banner { padding: 16px 14px; }
+            .cookie-text { font-size: 12px; }
+            .cookie-btn { padding: 10px 20px; font-size: 12px; letter-spacing: 0.8px; }
         }
         
         /* ========== МАЛЕНЬКИЙ ЭКРАН (до 380px) ========== */
@@ -279,6 +364,9 @@
             .hero-stat:last-child { grid-column: 1 / -1; }
             .logo { font-size: 15px; }
             .logo span { font-size: 9px; }
+            
+            .cookie-buttons { flex-direction: column; }
+            .cookie-btn { width: 100%; }
         }
     </style>
 </head>
@@ -664,6 +752,23 @@
         <div class="copyright"><span data-edit="auto_122">© 2026 ИП Петров А.В. Все права защищены.</span></div>
     </footer>
 
+    <!-- Cookie баннер -->
+    <div class="cookie-banner" id="cookieBanner">
+        <div class="cookie-content">
+            <div class="cookie-text">
+                <span data-edit="auto_123">Сайт использует технические cookie и может использовать Яндекс Метрику для анализа посещаемости и эффективности рекламы. Продолжая использование сайта, вы соглашаетесь с применением таких технологий в объёме, допускаемом законом.</span>
+            </div>
+            <div class="cookie-buttons">
+                <button class="cookie-btn cookie-btn-accept" id="cookieAccept">
+                    <i class="fas fa-check"></i> Принять
+                </button>
+                <a href="/cookies" class="cookie-btn cookie-btn-details">
+                    <i class="fas fa-info-circle"></i> Подробнее
+                </a>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Бургер-меню
         const menuToggle = document.getElementById('menuToggle');
@@ -694,7 +799,26 @@
                 }
             });
         });
+        
+        // Cookie баннер
+        (function() {
+            const banner = document.getElementById('cookieBanner');
+            const acceptBtn = document.getElementById('cookieAccept');
+            
+            // Проверяем, давал ли пользователь согласие ранее
+            if (!localStorage.getItem('cookieConsent')) {
+                // Показываем баннер через небольшую задержку
+                setTimeout(() => {
+                    banner.classList.add('show');
+                }, 1000);
+            }
+            
+            // Обработчик кнопки "Принять"
+            acceptBtn.addEventListener('click', function() {
+                localStorage.setItem('cookieConsent', 'accepted');
+                banner.classList.remove('show');
+            });
+        })();
     </script>
-
 
 </body></html>
