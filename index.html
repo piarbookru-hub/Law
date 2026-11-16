@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru"><head>
     <meta charset="UTF-8">
-<meta name="cms-deploy-id" content="dmwjlt0hr3glb4t">
+<meta name="cms-deploy-id" content="dmwhlzfadvr02u3">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ИП Петров А.В. — Юридические услуги в Москве</title>
     <link rel="icon" type="image/x-icon" href="favicon.png">
@@ -752,19 +752,19 @@
         <div class="copyright"><span data-edit="auto_122">© 2026 ИП Петров А.В. Все права защищены.</span></div>
     </footer>
 
-    <!-- Cookie баннер -->
-    <div class="cookie-banner" id="cookieBanner">
+    <!-- Cookie баннер: виден по умолчанию (class="show"), JS скрывает если согласие уже дано -->
+    <div class="cookie-banner show" id="cookieBanner">
         <div class="cookie-content">
-            <div class="cookie-text"><span data-edit="auto_123">
-                Сайт использует технические cookie и может использовать Яндекс Метрику для анализа посещаемости и эффективности рекламы. Продолжая использование сайта, вы соглашаетесь с применением таких технологий в объёме, допускаемом законом.
-            </span></div>
+            <div class="cookie-text">
+                <span data-edit="auto_123">Сайт использует технические cookie и может использовать Яндекс Метрику для анализа посещаемости и эффективности рекламы. Продолжая использование сайта, вы соглашаетесь с применением таких технологий в объёме, допускаемом законом.</span>
+            </div>
             <div class="cookie-buttons">
                 <button class="cookie-btn cookie-btn-accept" id="cookieAccept">
-                    <i class="fas fa-check"></i><span data-edit="auto_124"> Принять
-                </span></button>
+                    <i class="fas fa-check"></i> Принять
+                </button>
                 <a href="/cookies" class="cookie-btn cookie-btn-details">
-                    <i class="fas fa-info-circle"></i><span data-edit="auto_125"> Подробнее
-                </span></a>
+                    <i class="fas fa-info-circle"></i> Подробнее
+                </a>
             </div>
         </div>
     </div>
@@ -800,26 +800,27 @@
             });
         });
         
-        // Cookie баннер
+        // Cookie баннер: скрываем, если согласие уже дано ранее
         (function() {
             const banner = document.getElementById('cookieBanner');
             const acceptBtn = document.getElementById('cookieAccept');
+            if (!banner || !acceptBtn) return;
             
-            // Проверяем, давал ли пользователь согласие ранее
-            if (!localStorage.getItem('cookieConsent')) {
-                // Показываем баннер через небольшую задержку
-                setTimeout(() => {
-                    banner.classList.add('show');
-                }, 1000);
+            // Если пользователь уже нажимал "Принять" — прячем баннер
+            try {
+                if (localStorage.getItem('cookieConsent') === 'accepted') {
+                    banner.classList.remove('show');
+                }
+            } catch (e) {
+                // localStorage недоступен (инкогнито) — оставляем баннер видимым
             }
             
-            // Обработчик кнопки "Принять"
+            // Кнопка "Принять" — запоминаем и скрываем
             acceptBtn.addEventListener('click', function() {
-                localStorage.setItem('cookieConsent', 'accepted');
+                try { localStorage.setItem('cookieConsent', 'accepted'); } catch (e) {}
                 banner.classList.remove('show');
             });
         })();
     </script>
-
 
 </body></html>
