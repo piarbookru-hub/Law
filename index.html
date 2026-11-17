@@ -1,1515 +1,827 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
-<title>Админ-панель — визуальный редактор</title>
-<link rel="icon" type="image/png" href="favicon.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="config.js"></script>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', sans-serif; background: #0f0f0f; color: #fff; min-height: 100vh; min-height: 100dvh; overflow: hidden; }
-
-.login-screen { display: flex; align-items: center; justify-content: center; height: 100vh; height: 100dvh; padding: 20px; overflow-y: auto; }
-.login-card { background: #1a1a1a; border-radius: 16px; padding: 40px; max-width: 480px; width: 100%; border: 1px solid #2a2a2a; margin: auto; }
-.login-card h1 { font-size: 24px; margin-bottom: 8px; }
-.subtitle { color: #888; margin-bottom: 24px; font-size: 14px; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: #aaa; font-weight: 500; }
-.form-group input { width: 100%; padding: 12px 14px; background: #0f0f0f; border: 1px solid #333; border-radius: 8px; color: #fff; font: inherit; font-size: 14px; }
-input:focus, textarea:focus { outline: none; border-color: #F40009; }
-button:focus-visible, a:focus-visible { outline: 2px solid #F40009; outline-offset: 2px; }
-.btn { width: 100%; padding: 14px; background: #F40009; color: #fff; border: none; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; transition: background .2s; }
-.btn:hover { background: #d40007; }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-.btn-secondary { background: #2a2a2a; }
-.btn-secondary:hover { background: #333; }
-.help-link { color: #F40009; font-size: 13px; text-decoration: none; display: inline-block; margin-top: 12px; }
-.error-msg { color: #ff4444; font-size: 13px; margin-top: 8px; display: none; background: rgba(255, 68, 68, .1); padding: 10px; border-radius: 6px; border: 1px solid rgba(255, 68, 68, .3); }
-.error-msg.show { display: block; }
-
-.editor-app { display: none; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
-.editor-app.active { display: flex; }
-
-.editor-toolbar { background: #1a1a1a; border-bottom: 1px solid #2a2a2a; padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; z-index: 100; }
-.toolbar-row { display: flex; justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: wrap; }
-.app-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; }
-.toolbar-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-start; }
-.toolbar-btn { background: #2a2a2a; border: 1px solid #333; color: #fff; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: all .2s; }
-.toolbar-btn:hover { border-color: #F40009; }
-.toolbar-btn.primary { background: #F40009; border-color: #F40009; }
-.toolbar-btn.primary:hover { background: #d40007; }
-.toolbar-btn.warning { background: #8B4513; border-color: #A0522D; }
-.toolbar-btn.warning:hover { background: #A0522D; border-color: #CD853F; }
-.toolbar-btn:disabled { opacity: .5; cursor: not-allowed; }
-.unsaved-badge { background: #F40009; color: #fff; padding: 3px 8px; border-radius: 10px; font-size: 11px; margin-left: 0; display: none; white-space: nowrap; }
-.unsaved-badge.show { display: inline-block; }
-
-.deploy-badge { display: none; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: 'Courier New', monospace; cursor: pointer; border: 1px solid #333; background: #0f0f0f; color: #888; margin-left: 0; transition: all .2s; user-select: none; }
-.deploy-badge:hover { border-color: #666; }
-.deploy-badge.live { color: #00cc66; border-color: rgba(0, 204, 102, .45); background: rgba(0, 204, 102, .08); }
-.deploy-badge.pending { color: #fbbf24; border-color: rgba(251, 191, 36, .45); background: rgba(251, 191, 36, .08); }
-.deploy-badge.error { color: #ff4444; border-color: rgba(255, 68, 68, .45); background: rgba(255, 68, 68, .08); }
-.deploy-badge.unknown { color: #888; }
-
-.page-indicator { display: inline-flex; align-items: center; gap: 6px; background: #0f0f0f; border: 1px solid #333; padding: 7px 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; color: #c9a961; margin-left: 0; max-width: 320px; overflow: hidden; }
-.page-indicator i { color: #F40009; font-size: 11px; flex-shrink: 0; }
-#currentPageIndicator { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.page-indicator.viewmode { color: #888; border-color: #555; }
-
-.iframe-wrapper { flex: 1; position: relative; background: #fff; overflow: hidden; }
-.site-iframe { width: 100%; height: 100%; border: none; display: block; }
-.iframe-loader { position: absolute; inset: 0; background: #0f0f0f; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; transition: opacity .3s; }
-.iframe-loader.hidden { opacity: 0; pointer-events: none; }
-.spinner { width: 48px; height: 48px; border: 4px solid #2a2a2a; border-top-color: #F40009; border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: 16px; }
-.loader-text { color: #888; font-size: 14px; }
-.loader-status { color: #F40009; font-size: 12px; margin-top: 6px; font-family: 'Courier New', monospace; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.setup-screen { display: none; align-items: center; justify-content: center; flex: 1; padding: 20px; background: #0f0f0f; overflow-y: auto; }
-.setup-screen.active { display: flex; }
-.setup-card { background: #1a1a1a; border-radius: 16px; padding: 40px; max-width: 600px; width: 100%; border: 1px solid #2a2a2a; text-align: center; margin: auto; }
-.setup-card > .setup-icon { font-size: 48px; color: #F40009; margin-bottom: 16px; }
-.setup-card h2 { font-size: 20px; margin-bottom: 12px; }
-.setup-card p { color: #888; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
-.setup-card strong { color: #fff; }
-
-.token-check-box { background: #0f0f0f; border: 1px solid #2a2a2a; border-radius: 10px; padding: 16px; margin-bottom: 20px; text-align: left; }
-.token-check-box h3 { font-size: 14px; margin-bottom: 10px; color: #F40009; }
-.token-info { font-family: 'Courier New', monospace; font-size: 12px; color: #aaa; background: #000; padding: 10px; border-radius: 6px; word-break: break-all; margin-top: 8px; }
-.token-info .label { color: #888; display: block; margin-bottom: 4px; }
-
-.error-details { background: rgba(255, 68, 68, .1); border: 1px solid rgba(255, 68, 68, .3); border-radius: 8px; padding: 16px; margin-top: 16px; text-align: left; font-family: 'Courier New', monospace; font-size: 13px; color: #ff4444; word-break: break-word; }
-.err-title { font-weight: 700; color: #fff; margin-bottom: 8px; font-family: 'Inter', sans-serif; font-size: 14px; }
-.err-status { color: #F40009; font-weight: 600; margin-bottom: 6px; }
-.err-fix { color: #00cc66; margin-top: 10px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; }
-
-.progress-log { text-align: left; background: #0f0f0f; border-radius: 8px; padding: 16px; margin-top: 20px; max-height: 250px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; }
-.log-item { padding: 4px 0; color: #888; }
-.log-item.done { color: #00cc66; }
-.log-item.error { color: #ff4444; }
-.log-item.working { color: #F40009; }
-
-/* ИСПРАВЛЕНО (п.10): панель редактирования — кнопки прибиты к низу, прокручивается только контент */
-.edit-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #1a1a1a; border-top: 2px solid #F40009; transform: translateY(100%); visibility: hidden; transition: transform .3s, visibility .3s; z-index: 1000; box-shadow: 0 -10px 40px rgba(0, 0, 0, .5); max-height: 75vh; display: flex; flex-direction: column; }
-.edit-panel.active { transform: translateY(0); visibility: visible; }
-.edit-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 12px; flex-shrink: 0; }
-.edit-panel-header h3 { font-size: 14px; font-weight: 600; }
-.key-badge { background: #2a2a2a; color: #888; padding: 2px 8px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px; margin-left: 8px; }
-.edit-panel-close { background: transparent; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 4px 8px; }
-.edit-panel-close:hover { color: #fff; }
-.edit-panel-body { overflow-y: auto; padding: 0 20px 12px; flex: 1; min-height: 0; }
-.edit-panel textarea { width: 100%; min-height: 90px; padding: 12px; background: #0f0f0f; border: 1px solid #333; border-radius: 8px; color: #fff; font: inherit; font-size: 14px; resize: vertical; }
-.edit-panel-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 12px 20px 16px; border-top: 1px solid #2a2a2a; flex-shrink: 0; }
-
-.link-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #2a2a2a; }
-.link-section label.field-label { display: block; font-size: 12px; color: #aaa; margin-bottom: 6px; font-weight: 500; }
-.link-section input[type="url"] { width: 100%; padding: 10px 12px; background: #0f0f0f; border: 1px solid #333; border-radius: 6px; color: #fff; font: inherit; font-size: 13px; }
-.link-hint { font-size: 11px; color: #666; margin-top: 6px; }
-
-.link-option { margin-top: 12px; }
-.link-option > .field-label { margin-bottom: 8px; display: block; font-size: 12px; color: #aaa; font-weight: 500; }
-.option-group { display: flex; flex-wrap: wrap; gap: 8px; }
-.radio-label { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; background: #0f0f0f; border: 1px solid #333; border-radius: 6px; cursor: pointer; font-size: 13px; color: #ccc; transition: all .2s; user-select: none; }
-.radio-label:hover { border-color: #666; }
-.radio-label input[type="radio"] { accent-color: #F40009; cursor: pointer; margin: 0; }
-.radio-label:has(input:checked) { border-color: #F40009; background: rgba(244, 0, 9, .08); }
-
-.color-preview { display: inline-block; padding: 2px 6px; border-radius: 3px; font-weight: 500; }
-.color-preview.inherit { color: #fff; background: #2a2a2a; }
-.color-preview.brown { color: #fff; background: #8B4513; }
-.color-preview.lightbrown { color: #fff; background: #CD853F; }
-.target-label { color: #ccc; }
-
-.file-upload { position: relative; display: flex; align-items: center; gap: 12px; padding: 16px; background: #0f0f0f; border: 2px dashed #333; border-radius: 8px; cursor: pointer; transition: border-color .2s; }
-.file-upload:hover, .file-upload:focus-within { border-color: #F40009; }
-.file-upload i { font-size: 24px; color: #F40009; }
-.upload-text { flex: 1; font-size: 14px; color: #aaa; }
-.file-upload input[type=file] { position: absolute; opacity: 0; width: 1px; height: 1px; }
-
-.status-bar { position: fixed; top: 60px; right: 24px; background: #1a1a1a; padding: 12px 18px; border-radius: 8px; border: 1px solid #2a2a2a; font-size: 14px; display: none; z-index: 2000; max-width: 420px; }
-.status-bar.show { display: block; animation: slideIn .3s ease-out; }
-.status-bar.success { border-color: #00cc66; color: #00cc66; }
-.status-bar.error { border-color: #ff4444; color: #ff4444; }
-.status-bar.info { border-color: #888; color: #ddd; }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-.hint-banner { background: rgba(244, 0, 9, .1); border-bottom: 1px solid rgba(244, 0, 9, .3); padding: 8px 20px; font-size: 13px; color: #aaa; text-align: center; }
-.hint-banner strong { color: #F40009; }
-.hint-banner i { color: #F40009; margin-right: 6px; }
-
-.btn-group { display: flex; gap: 10px; margin-top: 16px; }
-.btn-group .btn { flex: 1; }
-.btn-small { width: auto; padding: 10px 16px; font-size: 13px; }
-
-@media (prefers-reduced-motion: reduce) { .status-bar.show { animation: none; } .edit-panel, .btn, .toolbar-btn { transition: none; } }
-</style>
+<html lang="ru"><head>
+    <meta charset="UTF-8">
+<meta name="cms-deploy-id" content="dmwkb8wdrpf1lby">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ИП Петров А.В. — Юридические услуги в Москве</title>
+    <link rel="icon" type="image/x-icon" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background: #f5f7fa; color: #2a3847; line-height: 1.7; overflow-x: hidden; }
+        h1, h2, h3, .logo { font-family: 'Merriweather', serif; color: #1e3a5f; }
+        img { max-width: 100%; display: block; }
+        p, span, a, div { overflow-wrap: break-word; }
+        section { scroll-margin-top: 76px; }
+        a, button, .faq-question { -webkit-tap-highlight-color: transparent; }
+        
+        nav { position: fixed; top: 0; width: 100%; background: #1e3a5f; z-index: 1000; padding: 18px 0; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; position: relative; }
+        .logo { font-size: 22px; font-weight: 700; color: #c9a961; letter-spacing: 1px; line-height: 1.2; }
+        .logo span { color: #fff; font-weight: 400; font-size: 14px; display: block; letter-spacing: 2px; text-transform: uppercase; }
+        .nav-links { display: flex; gap: 30px; list-style: none; }
+        .nav-links a { color: #fff; text-decoration: none; font-weight: 500; font-size: 14px; transition: color 0.3s; }
+        .nav-links a:hover { color: #c9a961; }
+        .nav-phone { color: #c9a961; font-weight: 700; font-size: 15px; text-decoration: none; white-space: nowrap; }
+        .nav-phone i { margin-right: 6px; }
+        .menu-toggle { display: none; background: none; border: none; color: #c9a961; font-size: 24px; cursor: pointer; padding: 6px 10px; line-height: 1; }
+        
+        .hero { min-height: 100vh; background: linear-gradient(135deg, rgba(30,58,95,0.92), rgba(20,40,70,0.95)), url('images/hero.jpg') center/cover; display: flex; align-items: center; padding: 140px 30px 80px; color: #fff; }
+        .hero-container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1.2fr 1fr; gap: 60px; align-items: center; }
+        .hero-badge { display: inline-block; padding: 8px 18px; background: rgba(201,169,97,0.2); border: 1px solid #c9a961; color: #c9a961; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 25px; border-radius: 4px; }
+        .hero h1 { font-size: 56px; color: #fff; margin-bottom: 25px; line-height: 1.15; font-weight: 900; }
+        .hero h1 span { color: #c9a961; display: block; font-size: 28px; font-weight: 400; font-style: italic; margin-top: 10px; }
+        .hero p { font-size: 18px; margin-bottom: 35px; color: #d0d8e0; line-height: 1.7; }
+        .hero-btns { display: flex; flex-wrap: wrap; gap: 15px; }
+        .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 40px; padding-top: 40px; border-top: 1px solid rgba(201,169,97,0.3); }
+        .hero-stat .number { font-family: 'Merriweather', serif; font-size: 42px; color: #c9a961; font-weight: 900; line-height: 1; }
+        .hero-stat .label { color: #a0aab5; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
+        .hero-photo { position: relative; }
+        .hero-photo img { width: 100%; height: 550px; object-fit: cover; border-radius: 4px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); border: 4px solid rgba(201,169,97,0.3); }
+        .hero-photo-badge { position: absolute; bottom: -30px; left: 30px; background: #c9a961; color: #1e3a5f; padding: 20px 30px; border-radius: 4px; font-weight: 700; }
+        .hero-photo-badge strong { display: block; font-family: 'Merriweather', serif; font-size: 28px; line-height: 1; }
+        .hero-photo-badge small { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 18px 40px; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; border: none; cursor: pointer; transition: all 0.3s; border-radius: 4px; }
+        .btn-primary { background: #c9a961; color: #1e3a5f; box-shadow: 0 8px 20px rgba(201,169,97,0.3); }
+        .btn-primary:hover { background: #b8985a; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(201,169,97,0.4); }
+        .btn-outline { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.4); }
+        .btn-outline:hover { border-color: #c9a961; color: #c9a961; }
+        
+        section { padding: 100px 30px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section-title { text-align: center; margin-bottom: 70px; }
+        .section-title .subtitle { color: #c9a961; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 15px; font-weight: 600; }
+        .section-title h2 { font-size: 44px; color: #1e3a5f; font-weight: 700; position: relative; display: inline-block; }
+        .section-title h2::after { content: ''; position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); width: 60px; height: 3px; background: #c9a961; }
+        .section-title p { color: #6b7785; margin-top: 30px; max-width: 650px; margin-left: auto; margin-right: auto; font-size: 16px; }
+        
+        .about { background: #fff; }
+        .about-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 70px; align-items: center; }
+        .about-photo { position: relative; }
+        .about-photo img { width: 100%; height: 550px; object-fit: cover; border-radius: 4px; box-shadow: 0 20px 50px rgba(30,58,95,0.15); }
+        .about-photo::before { content: ''; position: absolute; top: -20px; right: -20px; width: 100%; height: 100%; border: 3px solid #c9a961; border-radius: 4px; z-index: -1; }
+        .about-content .subtitle { color: #c9a961; font-size: 13px; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 15px; font-weight: 600; }
+        .about-content h2 { font-size: 40px; margin-bottom: 25px; line-height: 1.2; }
+        .about-content p { color: #5a6978; margin-bottom: 20px; font-size: 16px; }
+        .credentials { margin-top: 35px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .credential { display: flex; gap: 15px; padding: 20px; background: #f5f7fa; border-radius: 4px; border-left: 3px solid #c9a961; }
+        .credential i { color: #c9a961; font-size: 24px; flex-shrink: 0; }
+        .credential strong { display: block; color: #1e3a5f; margin-bottom: 4px; font-size: 15px; }
+        .credential span { color: #6b7785; font-size: 13px; }
+        
+        .specializations { background: #1e3a5f; color: #fff; }
+        .specializations .section-title h2 { color: #fff; }
+        .specializations .section-title .subtitle { color: #c9a961; }
+        .spec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+        .spec-card { background: rgba(255,255,255,0.05); padding: 40px 30px; border-radius: 4px; border: 1px solid rgba(201,169,97,0.2); transition: all 0.3s; text-align: center; min-width: 0; }
+        .spec-card:hover { background: rgba(201,169,97,0.1); transform: translateY(-8px); border-color: #c9a961; }
+        .spec-icon { width: 70px; height: 70px; margin: 0 auto 25px; background: rgba(201,169,97,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #c9a961; }
+        .spec-card h3 { color: #fff; font-size: 20px; margin-bottom: 15px; font-weight: 700; }
+        .spec-card p { color: #a0aab5; font-size: 14px; line-height: 1.7; }
+        
+        .services { background: #fff; }
+        .services-list { max-width: 900px; margin: 0 auto; }
+        .service-item { display: grid; grid-template-columns: auto 1fr auto; gap: 30px; padding: 30px 0; border-bottom: 1px solid #e5eaf0; align-items: center; transition: all 0.3s; }
+        .service-item:hover { padding-left: 15px; background: #f8fafc; }
+        .service-item:last-child { border-bottom: none; }
+        .service-num { font-family: 'Merriweather', serif; font-size: 28px; color: #c9a961; font-weight: 900; width: 50px; }
+        .service-info h3 { font-size: 20px; color: #1e3a5f; margin-bottom: 8px; font-weight: 700; }
+        .service-info p { color: #6b7785; font-size: 14px; }
+        .service-price { text-align: right; }
+        .service-price .from { display: block; color: #a0aab5; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+        .service-price strong { font-family: 'Merriweather', serif; font-size: 22px; color: #c9a961; font-weight: 700; }
+        
+        .faq { background: #f5f7fa; }
+        .faq-list { max-width: 850px; margin: 0 auto; }
+        .faq-item { background: #fff; margin-bottom: 15px; border-radius: 4px; overflow: hidden; border-left: 4px solid #c9a961; box-shadow: 0 2px 10px rgba(30,58,95,0.05); }
+        .faq-question { padding: 25px 30px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; gap: 14px; }
+        .faq-question:hover { background: #f8fafc; }
+        .faq-question h3 { font-size: 17px; color: #1e3a5f; font-weight: 600; flex: 1; font-family: 'Inter', sans-serif; }
+        .faq-question i { color: #c9a961; font-size: 18px; transition: transform 0.3s; flex-shrink: 0; }
+        .faq-answer { padding: 0 30px; max-height: 0; overflow: hidden; transition: all 0.4s; }
+        .faq-answer p { color: #5a6978; padding-bottom: 25px; line-height: 1.7; }
+        .faq-item.active .faq-question { background: #f8fafc; }
+        .faq-item.active .faq-question i { transform: rotate(180deg); }
+        .faq-item.active .faq-answer { max-height: 300px; }
+        
+        .contact { background: #1e3a5f; color: #fff; }
+        .contact .section-title h2 { color: #fff; }
+        .contact .section-title .subtitle { color: #c9a961; }
+        .contact .section-title p { color: #a0aab5; }
+        .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+        .contact-info h3 { color: #fff; font-size: 24px; margin-bottom: 30px; }
+        .contact-item { display: flex; gap: 20px; margin-bottom: 30px; align-items: flex-start; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 4px; border-left: 3px solid #c9a961; }
+        .contact-item i { font-size: 24px; color: #c9a961; flex-shrink: 0; margin-top: 3px; }
+        .contact-item strong { display: block; color: #c9a961; margin-bottom: 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        .contact-item span, .contact-item a { color: #fff; font-size: 16px; line-height: 1.6; text-decoration: none; }
+        .contact-item a:hover { color: #c9a961; }
+        .contact-form { background: #fff; padding: 45px; border-radius: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
+        .contact-form h3 { color: #1e3a5f; font-size: 26px; margin-bottom: 10px; }
+        .contact-form > p { color: #6b7785; margin-bottom: 30px; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; color: #1e3a5f; font-size: 13px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 14px 18px; background: #f5f7fa; border: 2px solid #e5eaf0; color: #2a3847; font-family: inherit; font-size: 16px; transition: border-color 0.3s; border-radius: 4px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #c9a961; background: #fff; }
+        .form-group textarea { resize: vertical; min-height: 110px; }
+        .privacy-note { font-size: 12px; color: #a0aab5; margin-top: 15px; text-align: center; }
+        
+        footer { background: #152a44; color: #a0aab5; padding: 40px 30px 25px; text-align: center; }
+        footer .logo { color: #c9a961; margin-bottom: 15px; font-size: 20px; }
+        footer .logo span { color: #a0aab5; font-size: 12px; }
+        footer p { font-size: 13px; margin-bottom: 15px; line-height: 1.6; }
+        .footer-socials { display: flex; justify-content: center; gap: 12px; margin: 20px 0; }
+        .footer-socials a { width: 44px; height: 44px; background: rgba(201,169,97,0.1); color: #c9a961; display: flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 50%; transition: all 0.3s; font-size: 17px; }
+        .footer-socials a:hover { background: #c9a961; color: #1e3a5f; }
+        .copyright { padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: #6b7785; }
+        
+        /* ========== COOKIE БАННЕР ========== */
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e3a5f;
+            color: #fff;
+            padding: 25px 30px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+            z-index: 9999;
+            display: none;
+            animation: slideUp 0.4s ease-out;
+        }
+        .cookie-banner.show { display: block; }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .cookie-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 30px;
+        }
+        .cookie-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #d0d8e0;
+        }
+        .cookie-text strong {
+            color: #c9a961;
+            font-weight: 600;
+        }
+        .cookie-buttons {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .cookie-btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cookie-btn-accept {
+            background: #c9a961;
+            color: #1e3a5f;
+        }
+        .cookie-btn-accept:hover {
+            background: #b8985a;
+            transform: translateY(-2px);
+        }
+        .cookie-btn-details {
+            background: transparent;
+            color: #c9a961;
+            border: 2px solid #c9a961;
+        }
+        .cookie-btn-details:hover {
+            background: rgba(201,169,97,0.1);
+        }
+        
+        /* ========== ПЛАНШЕТ (до 968px) ========== */
+        @media (max-width: 968px) {
+            nav { padding: 12px 0; }
+            .nav-container { padding: 0 20px; }
+            .logo { font-size: 19px; }
+            .logo span { font-size: 11px; }
+            .menu-toggle { display: block; }
+            .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1e3a5f; flex-direction: column; gap: 0; padding: 8px 0 14px; border-top: 1px solid rgba(201,169,97,0.25); box-shadow: 0 14px 30px rgba(0,0,0,0.25); }
+            .nav-links.open { display: flex; }
+            .nav-links li a { display: block; padding: 13px 24px; font-size: 15px; }
+            .nav-phone { display: none; }
+            
+            section { scroll-margin-top: 62px; }
+            .hero { min-height: auto; padding: 100px 20px 50px; }
+            .hero-container { grid-template-columns: 1fr; gap: 34px; }
+            .hero h1 { font-size: 34px; margin-bottom: 18px; }
+            .hero h1 span { font-size: 20px; }
+            .hero p { font-size: 16px; margin-bottom: 26px; }
+            .hero-photo img { height: 380px; }
+            .hero-photo-badge { bottom: -18px; left: 18px; padding: 13px 20px; }
+            .hero-photo-badge strong { font-size: 21px; }
+            .hero-photo-badge small { font-size: 10px; }
+            .hero-stats { gap: 18px; margin-top: 28px; padding-top: 28px; }
+            .hero-stat .number { font-size: 30px; }
+            .hero-stat .label { font-size: 11px; }
+            
+            section { padding: 60px 20px; }
+            .section-title { margin-bottom: 42px; }
+            .section-title h2 { font-size: 32px; }
+            .section-title p { font-size: 15px; margin-top: 22px; }
+            
+            .about-grid { grid-template-columns: 1fr; gap: 36px; }
+            .about-photo::before { display: none; }
+            .about-photo img { height: 340px; }
+            .about-content h2 { font-size: 30px; }
+            
+            .spec-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
+            .spec-card { padding: 28px 18px; }
+            .spec-icon { width: 58px; height: 58px; font-size: 24px; margin-bottom: 18px; }
+            .spec-card h3 { font-size: 17px; margin-bottom: 10px; }
+            
+            .service-item { grid-template-columns: auto 1fr; gap: 14px; padding: 22px 0; }
+            .service-num { font-size: 22px; width: 38px; }
+            .service-info h3 { font-size: 18px; }
+            .service-price { grid-column: 1 / -1; text-align: left; margin-top: 2px; }
+            .service-price .from { display: inline; margin-right: 5px; }
+            
+            .faq-question { padding: 20px 22px; }
+            .faq-answer { padding: 0 22px; }
+            .faq-item.active .faq-answer { max-height: 400px; }
+            
+            .contact-grid { grid-template-columns: 1fr; gap: 34px; }
+            .contact-form { padding: 30px 24px; }
+            
+            .cookie-banner { padding: 20px; }
+            .cookie-content { flex-direction: column; gap: 20px; }
+            .cookie-text { font-size: 13px; }
+            .cookie-buttons { width: 100%; }
+            .cookie-btn { flex: 1; }
+        }
+        
+        /* ========== СМАРТФОН (до 640px) ========== */
+        @media (max-width: 640px) {
+            nav { padding: 10px 0; }
+            .nav-container { padding: 0 14px; }
+            .logo { font-size: 17px; }
+            .logo span { font-size: 10px; letter-spacing: 1.5px; }
+            .menu-toggle { font-size: 22px; }
+            .nav-links li a { padding: 14px 20px; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+            .nav-links li:last-child a { border-bottom: none; }
+            
+            section { scroll-margin-top: 56px; }
+            .hero { padding: 88px 14px 40px; }
+            .hero-badge { font-size: 11px; padding: 6px 13px; letter-spacing: 1.2px; margin-bottom: 16px; }
+            .hero h1 { font-size: 27px; margin-bottom: 14px; }
+            .hero h1 span { font-size: 17px; margin-top: 6px; }
+            .hero p { font-size: 14.5px; margin-bottom: 20px; }
+            .hero-btns { flex-direction: column; gap: 10px; }
+            .hero-btns .btn { width: 100%; padding: 15px 20px; font-size: 13px; letter-spacing: 1.2px; }
+            .hero-stats { gap: 10px; margin-top: 22px; padding-top: 22px; }
+            .hero-stat .number { font-size: 22px; }
+            .hero-stat .label { font-size: 9.5px; letter-spacing: 0.5px; }
+            .hero-photo img { height: 280px; border-width: 3px; }
+            .hero-photo-badge { bottom: -14px; left: 12px; padding: 10px 15px; }
+            .hero-photo-badge strong { font-size: 18px; }
+            .hero-photo-badge small { font-size: 9px; }
+            
+            section { padding: 44px 14px; }
+            .section-title { margin-bottom: 30px; }
+            .section-title .subtitle { font-size: 11px; letter-spacing: 2px; margin-bottom: 10px; }
+            .section-title h2 { font-size: 25px; }
+            .section-title h2::after { bottom: -10px; width: 44px; }
+            .section-title p { font-size: 13.5px; margin-top: 16px; }
+            
+            .about-photo img { height: 250px; }
+            .about-content h2 { font-size: 23px; margin-bottom: 16px; }
+            .about-content p { font-size: 14px; margin-bottom: 14px; }
+            .credentials { grid-template-columns: 1fr; gap: 12px; margin-top: 22px; }
+            .credential { padding: 15px; gap: 12px; }
+            .credential i { font-size: 20px; }
+            .credential strong { font-size: 14px; }
+            .credential span { font-size: 12px; }
+            
+            .spec-grid { grid-template-columns: 1fr; gap: 12px; }
+            .spec-card { padding: 24px 18px; }
+            
+            .service-item { gap: 10px; padding: 18px 0; }
+            .service-num { font-size: 18px; width: 30px; }
+            .service-info h3 { font-size: 16px; margin-bottom: 5px; }
+            .service-info p { font-size: 13px; }
+            .service-price strong { font-size: 18px; }
+            
+            .faq-item { margin-bottom: 10px; }
+            .faq-question { padding: 16px 16px; }
+            .faq-question h3 { font-size: 14.5px; }
+            .faq-question i { font-size: 15px; }
+            .faq-answer { padding: 0 16px; }
+            .faq-answer p { font-size: 13.5px; padding-bottom: 18px; }
+            .faq-item.active .faq-answer { max-height: 500px; }
+            
+            .contact-info h3 { font-size: 20px; margin-bottom: 18px; }
+            .contact-item { padding: 15px; gap: 14px; margin-bottom: 12px; }
+            .contact-item i { font-size: 19px; }
+            .contact-item strong { font-size: 11px; margin-bottom: 3px; }
+            .contact-item span, .contact-item a { font-size: 14px; }
+            .contact-form { padding: 22px 16px; }
+            .contact-form h3 { font-size: 21px; }
+            .contact-form > p { font-size: 12.5px; margin-bottom: 20px; }
+            .form-group { margin-bottom: 15px; }
+            .form-group label { font-size: 11px; margin-bottom: 6px; }
+            .form-group input, .form-group select, .form-group textarea { padding: 12px 14px; }
+            .form-group textarea { min-height: 90px; }
+            .contact-form .btn { width: 100%; padding: 15px 18px; font-size: 13px; }
+            
+            footer { padding: 30px 16px 20px; }
+            footer .logo { font-size: 17px; }
+            footer p { font-size: 12px; }
+            .footer-socials { gap: 10px; margin: 16px 0; }
+            .copyright { padding-top: 16px; font-size: 11px; }
+            
+            .cookie-banner { padding: 16px 14px; }
+            .cookie-text { font-size: 12px; }
+            .cookie-btn { padding: 10px 20px; font-size: 12px; letter-spacing: 0.8px; }
+        }
+        
+        /* ========== МАЛЕНЬКИЙ ЭКРАН (до 380px) ========== */
+        @media (max-width: 380px) {
+            .hero h1 { font-size: 24px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .hero-stat:last-child { grid-column: 1 / -1; }
+            .logo { font-size: 15px; }
+            .logo span { font-size: 9px; }
+            
+            .cookie-buttons { flex-direction: column; }
+            .cookie-btn { width: 100%; }
+        }
+    </style>
 </head>
 <body>
-
-<div class="login-screen" id="loginScreen">
-    <div class="login-card">
-        <h1><i class="fas fa-lock" style="color: #F40009;"></i> Вход в админ-панель</h1>
-        <p class="subtitle">Введите ваш GitHub Personal Access Token</p>
-        <div class="form-group">
-            <label for="tokenInput">Personal Access Token</label>
-            <input type="password" id="tokenInput" placeholder="github_pat_… или ghp_…" autocomplete="off">
-        </div>
-        <button class="btn" id="loginBtn">Войти</button>
-        <div class="error-msg" id="loginError" role="alert"></div>
-        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" class="help-link">
-            <i class="fas fa-external-link-alt"></i> Создать fine-grained токен (один репозиторий, Contents: Read and write)
-        </a>
-    </div>
-</div>
-
-<div class="editor-app" id="editorApp">
-    <div class="editor-toolbar">
-        <div class="toolbar-row toolbar-row-top">
-            <div class="app-title">
-                <i class="fas fa-magic" style="color: #F40009;"></i>
-                <span id="projectNameHeader" style="font-weight: 600; margin-left: 8px;">Редактор</span>
-                <span id="repoNameHeader" style="color: #888; font-weight: 400; margin-left: 8px; font-size: 13px;"></span>
+    <nav>
+        <div class="nav-container">
+            <div class="logo"><span data-edit="auto_1">
+                ИП ПЕТРОВ А.В.
+                </span><span><span data-edit="auto_2">Юридические услуги</span></span>
             </div>
-            <span class="page-indicator" id="pageIndicatorBox" title="Текущая страница"><i class="fas fa-file"></i> <span id="currentPageIndicator">index.html</span></span>
-            <span class="deploy-badge" id="deployBadge" title="Статус деплоя GitHub Pages. Клик — перепроверить."></span>
-            <button class="toolbar-btn primary" id="saveBtn"><i class="fas fa-cloud-upload-alt"></i> Сохранить в GitHub</button>
-            <span class="unsaved-badge" id="unsavedBadge"><i class="fas fa-circle" style="font-size: 8px;"></i> есть несохранённые</span>
+            <button class="menu-toggle" id="menuToggle" aria-label="Открыть меню">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#about"><span data-edit="auto_3">Обо мне</span></a></li>
+                <li><a href="#specializations"><span data-edit="auto_4">Специализации</span></a></li>
+                <li><a href="#services"><span data-edit="auto_5">Услуги</span></a></li>
+                <li><a href="#faq"><span data-edit="auto_6">FAQ</span></a></li>
+                <li><a href="#contact"><span data-edit="auto_7">Контакты</span></a></li>
+            </ul>
+            <a href="tel:+79991234567" class="nav-phone"><i class="fas fa-phone"></i><span data-edit="auto_8"> +7 (999) 123-45-67</span></a>
         </div>
-        <div class="toolbar-row toolbar-row-bottom">
-            <div class="toolbar-actions">
-                <button class="toolbar-btn" id="homeBtn" title="Вернуться к редактированию index.html" aria-label="На главную"><i class="fas fa-home"></i></button>
-                <button class="toolbar-btn" id="openSiteBtn" title="Открыть текущую страницу в новой вкладке"><i class="fas fa-external-link-alt"></i> Открыть сайт</button>
-                <button class="toolbar-btn" id="checkBtn" title="Проверить токен"><i class="fas fa-shield-alt"></i> Проверить</button>
-                <button class="toolbar-btn" id="reloadBtn" title="Обновить превью"><i class="fas fa-sync"></i> Обновить</button>
-                <button class="toolbar-btn warning" id="cleanBtn" title="Удалить все метки data-edit и data-img из текущей страницы"><i class="fas fa-broom"></i> Очистить метки</button>
-                <button class="toolbar-btn" id="resetBtn" title="Подготовить текущую страницу заново"><i class="fas fa-redo"></i> Переподготовить</button>
-                <button class="toolbar-btn" id="logoutBtn" title="Выйти" aria-label="Выйти"><i class="fas fa-sign-out-alt"></i></button>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-badge"><span data-edit="auto_9">★ Адвокат с 15-летним опытом</span></div>
+                <h1><span data-edit="auto_10">Защищаю ваши права </span><span><span data-edit="auto_11">профессионально и честно</span></span></h1>
+                <p><span data-edit="auto_12">Персональный юрист для физических и юридических лиц. Решение сложных правовых вопросов без посредников — работаю напрямую с каждым клиентом.</span></p>
+                <div class="hero-btns">
+                    <a href="#contact" class="btn btn-primary"><span data-edit="auto_13">
+                        Бесплатная консультация
+                        </span><i class="fas fa-arrow-right"></i>
+                    </a>
+                    <a href="#services" class="btn btn-outline"><span data-edit="auto_14">Мои услуги</span></a>
+                </div>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="number"><span data-edit="auto_15">15+</span></div>
+                        <div class="label"><span data-edit="auto_16">Лет практики</span></div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="number"><span data-edit="auto_17">850+</span></div>
+                        <div class="label"><span data-edit="auto_18">Выигранных дел</span></div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="number"><span data-edit="auto_19">97%</span></div>
+                        <div class="label"><span data-edit="auto_20">Положительных решений</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-photo">
+                <img src="images/lawyer.jpg" alt="Адвокат Петров А.В." data-img="images/lawyer.jpg" data-img-id="img_1">
+                <div class="hero-photo-badge">
+                    <strong><span data-edit="auto_21">15 лет</span></strong>
+                    <small><span data-edit="auto_22">в юридической практике</span></small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="about" id="about">
+        <div class="container">
+            <div class="about-grid">
+                <div class="about-photo">
+                    <img src="images/office.jpg" alt="Рабочий кабинет" data-img="images/office.jpg" data-img-id="img_2">
+                </div>
+                <div class="about-content">
+                    <div class="subtitle"><span data-edit="auto_23">Обо мне</span></div>
+                    <h2><span data-edit="auto_24">Петров Алексей Викторович</span></h2>
+                    <p><span data-edit="auto_25">Юрист с 15-летним опытом работы в области гражданского, семейного и корпоративного права. Член Адвокатской палаты г. Москвы.</span></p>
+                    <p><span data-edit="auto_26">За годы практики помог более 850 клиентам защитить свои права и интересы в судах всех инстанций. Работаю индивидуально с каждым — никаких посредников и помощников, только прямое взаимодействие.</span></p>
+                    <div class="credentials">
+                        <div class="credential">
+                            <i class="fas fa-graduation-cap"></i>
+                            <div>
+                                <strong><span data-edit="auto_27">МГУ им. Ломоносова</span></strong>
+                                <span><span data-edit="auto_28">Юридический факультет, 2008 г.</span></span>
+                            </div>
+                        </div>
+                        <div class="credential">
+                            <i class="fas fa-certificate"></i>
+                            <div>
+                                <strong><span data-edit="auto_29">Адвокатский статус</span></strong>
+                                <span><span data-edit="auto_30">Рег. номер 77/12345</span></span>
+                            </div>
+                        </div>
+                        <div class="credential">
+                            <i class="fas fa-award"></i>
+                            <div>
+                                <strong><span data-edit="auto_31">Награды</span></strong>
+                                <span><span data-edit="auto_32">Лучший юрист 2023 года</span></span>
+                            </div>
+                        </div>
+                        <div class="credential">
+                            <i class="fas fa-book"></i>
+                            <div>
+                                <strong><span data-edit="auto_33">Публикации</span></strong>
+                                <span><span data-edit="auto_34">Автор 30+ статей</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="specializations" id="specializations">
+        <div class="container">
+            <div class="section-title">
+                <div class="subtitle"><span data-edit="auto_35">Специализации</span></div>
+                <h2><span data-edit="auto_36">В чём я могу помочь</span></h2>
+            </div>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <div class="spec-icon"><i class="fas fa-gavel"></i></div>
+                    <h3><span data-edit="auto_37">Гражданские споры</span></h3>
+                    <p><span data-edit="auto_38">Защита прав потребителей, споры с застройщиками, возмещение ущерба, наследственные дела.</span></p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon"><i class="fas fa-users"></i></div>
+                    <h3><span data-edit="auto_39">Семейное право</span></h3>
+                    <p><span data-edit="auto_40">Разводы, раздел имущества, алименты, определение места жительства детей, брачные договоры.</span></p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon"><i class="fas fa-home"></i></div>
+                    <h3><span data-edit="auto_41">Недвижимость</span></h3>
+                    <p><span data-edit="auto_42">Сопровождение сделок, проверка объектов, споры с соседями, оспаривание кадастровой стоимости.</span></p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon"><i class="fas fa-briefcase"></i></div>
+                    <h3><span data-edit="auto_43">Бизнес и ИП</span></h3>
+                    <p><span data-edit="auto_44">Регистрация бизнеса, договорная работа, налоговые споры, защита от проверок.</span></p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon"><i class="fas fa-file-contract"></i></div>
+                    <h3><span data-edit="auto_45">Банкротство</span></h3>
+                    <p><span data-edit="auto_46">Банкротство физических лиц и ИП. Списание долгов под ключ с гарантией результата.</span></p>
+                </div>
+                <div class="spec-card">
+                    <div class="spec-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h3><span data-edit="auto_47">Трудовые споры</span></h3>
+                    <p><span data-edit="auto_48">Незаконное увольнение, невыплата зарплаты, восстановление на работе, компенсации.</span></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="services" id="services">
+        <div class="container">
+            <div class="section-title">
+                <div class="subtitle"><span data-edit="auto_49">Стоимость</span></div>
+                <h2><span data-edit="auto_50">Прозрачные цены</span></h2>
+                <p><span data-edit="auto_51">Фиксированная стоимость без скрытых платежей. Вы платите только за результат.</span></p>
+            </div>
+            <div class="services-list">
+                <div class="service-item">
+                    <div class="service-num"><span data-edit="auto_52">01</span></div>
+                    <div class="service-info">
+                        <h3><span data-edit="auto_53">Устная консультация</span></h3>
+                        <p><span data-edit="auto_54">Подробный разбор вашей ситуации, оценка перспектив, план действий.</span></p>
+                    </div>
+                    <div class="service-price">
+                        <span class="from"><span data-edit="auto_55">от</span></span>
+                        <strong><span data-edit="auto_56">2 400 ₽</span></strong>
+                    </div>
+                </div>
+                <div class="service-item">
+                    <div class="service-num"><span data-edit="auto_57">02</span></div>
+                    <div class="service-info">
+                        <h3><span data-edit="auto_58">Письменное заключение</span></h3>
+                        <p><span data-edit="auto_59">Детальный правовой анализ со ссылками на законы и судебную практику.</span></p>
+                    </div>
+                    <div class="service-price">
+                        <span class="from"><span data-edit="auto_60">от</span></span>
+                        <strong><span data-edit="auto_61">5 000 ₽</span></strong>
+                    </div>
+                </div>
+                <div class="service-item">
+                    <div class="service-num"><span data-edit="auto_62">03</span></div>
+                    <div class="service-info">
+                        <h3><span data-edit="auto_63">Составление документов</span></h3>
+                        <p><span data-edit="auto_64">Исковые заявления, жалобы, договоры, претензии, ходатайства.</span></p>
+                    </div>
+                    <div class="service-price">
+                        <span class="from"><span data-edit="auto_65">от</span></span>
+                        <strong><span data-edit="auto_66">3 500 ₽</span></strong>
+                    </div>
+                </div>
+                <div class="service-item">
+                    <div class="service-num"><span data-edit="auto_67">04</span></div>
+                    <div class="service-info">
+                        <h3><span data-edit="auto_68">Представительство в суде</span></h3>
+                        <p><span data-edit="auto_69">Полное ведение дела от подготовки до получения решения.</span></p>
+                    </div>
+                    <div class="service-price">
+                        <span class="from"><span data-edit="auto_70">от</span></span>
+                        <strong><span data-edit="auto_71">30 000 ₽</span></strong>
+                    </div>
+                </div>
+                <div class="service-item">
+                    <div class="service-num"><span data-edit="auto_72">05</span></div>
+                    <div class="service-info">
+                        <h3><span data-edit="auto_73">Банкротство под ключ</span></h3>
+                        <p><span data-edit="auto_74">Полное сопровождение процедуры списания долгов с гарантией.</span></p>
+                    </div>
+                    <div class="service-price">
+                        <span class="from"><span data-edit="auto_75">от</span></span>
+                        <strong><span data-edit="auto_76">80 000 ₽</span></strong>
+                    </div>
+                </div>
+                <div class="service-item">
+                    <div class="service-num"><span data-edit="auto_77">06</span></div>
+                    <div class="service-info">
+                        <h3><span data-edit="auto_78">Юридическое сопровождение</span></h3>
+                        <p><span data-edit="auto_79">Абонентское обслуживание для бизнеса — от 20 часов в месяц.</span></p>
+                    </div>
+                    <div class="service-price">
+                        <span class="from"><span data-edit="auto_80">от</span></span>
+                        <strong><span data-edit="auto_81">25 000 ₽/мес</span></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq" id="faq">
+        <div class="container">
+            <div class="section-title">
+                <div class="subtitle"><span data-edit="auto_82">FAQ</span></div>
+                <h2><span data-edit="auto_83">Частые вопросы</span></h2>
+            </div>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3><span data-edit="auto_84">Консультация действительно бесплатная?</span></h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p><span data-edit="auto_85">Да, первая консультация по телефону или в офисе — бесплатна. На ней я разберу вашу ситуацию, оценю перспективы и расскажу, как можем решить вопрос. Платите только если решите работать дальше.</span></p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3><span data-edit="auto_86">Работаете ли вы с другими городами?</span></h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p><span data-edit="auto_87">Да, работаю удалённо со всей Россией. Консультации провожу по видеосвязи, документы подписываем электронно. В суды могу выезжать в любой регион по договорённости.</span></p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3><span data-edit="auto_88">Как гарантируете результат?</span></h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p><span data-edit="auto_89">Заключаем официальный договор с прописанными обязательствами и стоимостью. Если я вижу, что дело бесперспективное — честно скажу об этом на консультации, не буду брать деньги зря.</span></p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3><span data-edit="auto_90">Можно ли оплатить услуги в рассрочку?</span></h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p><span data-edit="auto_91">Да, для крупных дел (банкротство, сложные судебные процессы) предусмотрена рассрочка на 3-6 месяцев без процентов. Обсуждаем индивидуально на консультации.</span></p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3><span data-edit="auto_92">Сколько времени занимает решение вопроса?</span></h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p><span data-edit="auto_93">Зависит от типа дела. Консультация — 1 день. Составление документов — 2-5 дней. Судебные дела — от 2 до 6 месяцев. Банкротство — 6-9 месяцев. Точные сроки называю после анализа ситуации.</span></p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3><span data-edit="auto_94">Работаете с юридическими лицами?</span></h3>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <p><span data-edit="auto_95">Да, сопровождаю ИП и ООО на постоянной основе: договорная работа, налоги, проверки, споры с контрагентами. Есть абонентское обслуживание от 25 000 ₽/месяц.</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="contact" id="contact">
+        <div class="container">
+            <div class="section-title">
+                <div class="subtitle"><span data-edit="auto_96">Контакты</span></div>
+                <h2><span data-edit="auto_97">Получите консультацию</span></h2>
+                <p><span data-edit="auto_98">Оставьте заявку — перезвоню в течение 15 минут и бесплатно проконсультирую по вашей ситуации.</span></p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <h3><span data-edit="auto_99">Как со мной связаться</span></h3>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <strong><span data-edit="auto_100">Телефон</span></strong>
+                            <a href="tel:+79991234567"><span data-edit="auto_101">+7 (999) 123-45-67</span></a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <strong><span data-edit="auto_102">Email</span></strong>
+                            <a href="mailto:petrov@law-office.ru"><span data-edit="auto_103">petrov@law-office.ru</span></a>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <strong><span data-edit="auto_104">Офис</span></strong>
+                            <span><span data-edit="auto_105">г. Москва, ул. Тверская, 15</span><br><span data-edit="auto_106">Бизнес-центр «Столица», офис 412</span></span>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <strong><span data-edit="auto_107">График работы</span></strong>
+                            <span><span data-edit="auto_108">Пн-Пт: 9:00 — 19:00</span><br><span data-edit="auto_109">Сб: 10:00 — 15:00 (по записи)</span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <h3><span data-edit="auto_110">Оставить заявку</span></h3>
+                    <p><span data-edit="auto_111">Заполните форму — перезвоню в течение 15 минут</span></p>
+                    <form action="https://formspree.io/f/xvkkbvpd" method="POST">
+                        <input type="hidden" name="_subject" value="Новая заявка с сайта юриста">
+                        <div class="form-group">
+                            <label><span data-edit="auto_112">Ваше имя</span></label>
+                            <input type="text" name="name" required="">
+                        </div>
+                        <div class="form-group">
+                            <label><span data-edit="auto_113">Телефон</span></label>
+                            <input type="tel" name="phone" required="">
+                        </div>
+                        <div class="form-group">
+                            <label><span data-edit="auto_114">Тип вопроса</span></label>
+                            <select name="question">
+                                <option>Гражданский спор</option>
+                                <option>Семейное право</option>
+                                <option>Недвижимость</option>
+                                <option>Бизнес и ИП</option>
+                                <option>Банкротство</option>
+                                <option>Трудовой спор</option>
+                                <option>Другое</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><span data-edit="auto_115">Кратко опишите ситуацию</span></label>
+                            <textarea name="message" placeholder="Расскажите о вашей проблеме..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;"><span data-edit="auto_116">
+                            Отправить заявку
+                            </span><i class="fas fa-paper-plane"></i>
+                        </button>
+                        <p class="privacy-note"><span data-edit="auto_117">Нажимая кнопку, вы соглашаетесь с политикой конфиденциальности</span></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="logo"><span data-edit="auto_118">
+            ИП ПЕТРОВ А.В.
+            </span><span><span data-edit="auto_119">Юридические услуги</span></span>
+        </div>
+        <p><span data-edit="auto_120">ИНН 771234567890 · ОГРНИП 312774612345678</span><br><span data-edit="auto_121">Член Адвокатской палаты г. Москвы</span></p>
+        <div class="footer-socials">
+            <a href="#" aria-label="Telegram"><i class="fab fa-telegram"></i></a>
+            <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" aria-label="ВКонтакте"><i class="fab fa-vk"></i></a>
+        </div>
+        <div class="copyright"><span data-edit="auto_122">© 2026 ИП Петров А.В. Все права защищены.</span></div>
+    </footer>
+
+    <!-- Cookie баннер: виден по умолчанию (class="show"), JS скрывает если согласие уже дано -->
+    <div class="cookie-banner show" id="cookieBanner">
+        <div class="cookie-content">
+            <div class="cookie-text"><span data-edit="auto_123">
+                Сайт использует технические cookie и может использовать Яндекс Метрику для анализа посещаемости и эффективности рекламы. Продолжая использование сайта, вы соглашаетесь с применением таких технологий в объёме, допускаемом законом.
+            </span></div>
+            <div class="cookie-buttons">
+                <button class="cookie-btn cookie-btn-accept" id="cookieAccept">
+                    <i class="fas fa-check"></i><span data-edit="auto_124"> Принять
+                </span></button>
+                <a href="/politika.html" class="cookie-btn cookie-btn-details" data-cms-link="1" target="_self" data-link-color="inherit" data-keep-color="1" style="color: inherit; text-decoration: none;">
+                    <i class="fas fa-info-circle"></i><span data-edit="auto_125"> Подробнее
+                </span></a>
             </div>
         </div>
     </div>
 
-    <div class="hint-banner" id="hintBanner">
-        <i class="fas fa-lightbulb"></i> Клик по <strong>тексту/фото</strong> — редактирование. <strong>Alt+клик</strong> по ссылке — открыть страницу в админке. <strong>Ctrl+клик</strong> — новая вкладка. <strong>Esc</strong> — закрыть панель.
-    </div>
-
-    <div class="setup-screen" id="setupScreen">
-        <div class="setup-card">
-            <div class="setup-icon"><i class="fas fa-wand-magic-sparkles"></i></div>
-            <h2 id="setupTitle">Подготовка сайта</h2>
-            <p>Админка автоматически:<br>• Загрузит текущую страницу<br>• Пометит <strong>весь видимый текст</strong> (любой язык, цифры)<br>• Расставит метки на <strong>фотографии</strong> (с уникальными ID)<br>• Сохранит обратно в репозиторий</p>
-            <div class="token-check-box"><h3><i class="fas fa-key"></i> Информация о токене</h3><div id="tokenInfo">Проверяю...</div></div>
-            <button class="btn" id="prepareBtn"><i class="fas fa-download"></i> Подготовить страницу</button>
-            <div class="btn-group">
-                <button class="btn btn-secondary btn-small" id="checkBtn2"><i class="fas fa-shield-alt"></i> Проверить токен</button>
-                <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-small" style="text-decoration: none; text-align: center; color: #fff;"><i class="fas fa-plus"></i> Новый токен</a>
-            </div>
-            <div id="errorDetails" role="alert"></div>
-            <div class="progress-log" id="progressLog" style="display: none;"></div>
-        </div>
-    </div>
-
-    <div class="iframe-wrapper" id="iframeWrapper" style="display: none;">
-        <div class="iframe-loader" id="iframeLoader">
-            <div class="spinner"></div>
-            <div class="loader-text">Загрузка страницы...</div>
-            <div class="loader-status" id="loaderStatus">Инициализация</div>
-        </div>
-        <iframe id="siteIframe" class="site-iframe" title="Превью сайта" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>
-    </div>
-</div>
-
-<div class="edit-panel" id="editPanel" role="dialog" aria-modal="true" aria-label="Редактирование">
-    <div class="edit-panel-header">
-        <h3><span id="editTitle">Редактирование</span><span class="key-badge" id="editKey"></span></h3>
-        <button class="edit-panel-close" id="closePanelBtn" aria-label="Закрыть">✕</button>
-    </div>
-    <div class="edit-panel-body" id="editPanelContent"></div>
-    <div class="edit-panel-actions">
-        <button class="toolbar-btn btn-secondary" id="cancelBtn">Отмена</button>
-        <button class="toolbar-btn primary" id="applyBtn">Применить</button>
-    </div>
-</div>
-
-<div class="status-bar" id="statusBar" role="status" aria-live="polite"></div>
-
-<script>
-'use strict';
-
-if (typeof CMS_CONFIG === 'undefined') {
-    document.body.innerHTML = '<p style="padding:40px;color:#ff4444;">Не найден config.js (CMS_CONFIG). Проверьте, что файл лежит рядом с этой страницей.</p>';
-    throw new Error('CMS_CONFIG is not defined');
-}
-
-const LINK_COLORS = { inherit: null, brown: '#8B4513', lightbrown: '#CD853F' };
-const XHTML_NS = 'http://www.w3.org/1999/xhtml';
-
-// ИСПРАВЛЕНО (бонус): разрешены allow-scripts — скрипты сайта работают (метрика, виджеты, анимации).
-// Безопасно, так как токен у клиента только на чтение.
-const PREVIEW_SANDBOX = 'allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox';
-const VIEW_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox';
-
-const $ = id => document.getElementById(id);
-
-const mkStore = st => ({
-    get: k => { try { return st.getItem(k); } catch { return null; } },
-    set: (k, v) => { try { st.setItem(k, v); } catch {} },
-    del: k => { try { st.removeItem(k); } catch {} }
-});
-let ls, ss;
-try { ls = mkStore(localStorage); } catch { ls = { get: () => null, set() {}, del() {} }; }
-try { ss = mkStore(sessionStorage); } catch { ss = { get: () => null, set() {}, del() {} }; }
-
-ls.del('gh_token');
-let token = ss.get('gh_token');
-let pending = {};
-let editKind = null, editKey = null, editImagePath = null, pendingImg = null, statusTimer = null, lastFocus = null;
-let editOrigText = null, editOrigImg = null;
-let currentFile = ls.get('cms_currentFile') || 'index.html';
-let viewModeUrl = null;
-let siteBaseUrl = '';
-let siteBasePath = '/';
-let repoDeployId = null;
-let deployPollGen = 0;
-const API = `https://api.github.com/repos/${CMS_CONFIG.owner}/${CMS_CONFIG.repo}`;
-
-$('projectNameHeader').textContent = CMS_CONFIG.projectName || 'Редактор';
-$('repoNameHeader').textContent = `· ${CMS_CONFIG.owner}/${CMS_CONFIG.repo}`;
-
-function saveCurrentFile() { ls.set('cms_currentFile', currentFile); }
-
-try {
-    const loc = window.location;
-    const pathParts = loc.pathname.split('/').filter(Boolean);
-    if (pathParts.length > 0) {
-        const lastPart = pathParts[pathParts.length - 1];
-        if (lastPart.endsWith('.html')) pathParts.pop();
-        const secondLast = pathParts[pathParts.length - 1];
-        if (secondLast === 'admin' || secondLast === 'panel') pathParts.pop();
-        if (pathParts.length > 0) {
-            siteBaseUrl = loc.origin + '/' + pathParts.join('/') + '/';
-            siteBasePath = '/' + pathParts.join('/') + '/';
-        } else { siteBaseUrl = loc.origin + '/'; siteBasePath = '/'; }
-    } else { siteBaseUrl = loc.origin + '/'; siteBasePath = '/'; }
-} catch {
-    siteBaseUrl = window.location.origin + '/';
-    siteBasePath = '/';
-}
-
-function siteBasePathNoSlash() {
-    return siteBasePath.replace(/\/+$/, '');
-}
-
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const encPath = p => p.split('/').map(encodeURIComponent).join('/');
-
-function pageUrl(file = currentFile) { return new URL(encPath(file), siteBaseUrl); }
-
-function safeAbs(href) {
-    try {
-        const u = new URL(href, pageUrl());
-        return ['http:', 'https:', 'tel:', 'mailto:'].includes(u.protocol) ? u.href : null;
-    } catch { return null; }
-}
-function openSafe(href) { const u = safeAbs(href); if (u) window.open(u, '_blank', 'noopener'); }
-function validLinkUrl(u) {
-    if (!u) return true;
-    if (u.startsWith('#')) return true;
-    return !!safeAbs(u);
-}
-
-// ИСПРАВЛЕНО (п.2 Claude): нормализация путей, / и /index.html считаются одним путём
-function isAdminSelf(file) {
-    try {
-        const norm = p => p.replace(/index\.html?$/i, '').replace(/\/+$/, '');
-        const u = new URL(encPath(file), siteBaseUrl);
-        return u.origin === window.location.origin && norm(u.pathname) === norm(window.location.pathname);
-    } catch { return false; }
-}
-
-function resolveRepoPath(src) {
-    try {
-        const dirUrl = new URL(encPath(currentFile), 'https://repo.local/');
-        const u = new URL(src, dirUrl);
-        let p = decodeURIComponent(u.pathname);
-        if (src.startsWith('/') && siteBasePath !== '/' && p.startsWith(siteBasePath)) p = p.slice(siteBasePath.length);
-        p = p.replace(/^\/+/, '');
-        return p || null;
-    } catch { return null; }
-}
-
-function updatePageIndicator() {
-    const el = $('currentPageIndicator');
-    const box = $('pageIndicatorBox');
-    if (!el) return;
-    if (viewModeUrl) {
-        el.textContent = 'просмотр: ' + viewModeUrl.replace(/^https?:\/\//, '');
-        if (box) { box.classList.add('viewmode'); box.title = 'Режим просмотра (без редактирования).'; }
-    } else {
-        el.textContent = currentFile;
-        if (box) { box.classList.remove('viewmode'); box.title = 'Текущая страница (сохраняется при F5)'; }
-    }
-}
-
-function newDeployId() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-
-function readDeployId(html) {
-    const m = html.match(/<meta\s+name=["']cms-deploy-id["']\s+content=["']([^"']+)["']/i);
-    return m ? m[1] : null;
-}
-
-function stampDeployId(html, id) {
-    const tag = `<meta name="cms-deploy-id" content="${id}">`;
-    if (/<meta\s+name=["']cms-deploy-id["']/i.test(html)) {
-        return html.replace(/<meta\s+name=["']cms-deploy-id["'][^>]*>/i, tag);
-    }
-    if (/<meta\s+charset[^>]*>/i.test(html)) return html.replace(/<meta\s+charset[^>]*>/i, m => m + '\n' + tag);
-    if (/<head(\s[^>]*)?>/.test(html)) return html.replace(/<head(\s[^>]*)?>/i, m => m + '\n' + tag);
-    return html.replace(/^(<!DOCTYPE[^>]*>\s*)?/i, m => m + tag + '\n');
-}
-
-function setDeployBadge(state, html) {
-    const b = $('deployBadge');
-    if (!b) return;
-    if (state === 'idle') { b.className = 'deploy-badge'; b.style.display = 'none'; b.innerHTML = ''; return; }
-    b.className = 'deploy-badge ' + state;
-    b.style.display = 'inline-flex';
-    b.innerHTML = html;
-}
-
-async function fetchLiveDeployId() {
-    const u = pageUrl();
-    u.searchParams.set('cb', Date.now());
-    const res = await fetch(u.href, { cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return readDeployId(await res.text());
-}
-
-// ИСПРАВЛЕНО (п.3 Claude): try/catch внутри цикла, чтобы сетевая ошибка не обрывала проверку
-async function verifyDeploy(expectedId, singleCheck) {
-    const gen = ++deployPollGen;
-    if (!expectedId) { setDeployBadge('unknown', '<i class="fas fa-info-circle"></i> Нет метки'); return; }
-    try {
-        const live = await fetchLiveDeployId();
-        if (gen !== deployPollGen) return;
-        if (live === expectedId) { setDeployBadge('live', '<i class="fas fa-check-circle"></i> Сайт обновлён'); return; }
-        setDeployBadge('pending', '<i class="fas fa-spinner fa-spin"></i> Деплой...');
-        if (singleCheck) return;
-        for (let i = 0; i < 30; i++) {
-            await new Promise(r => setTimeout(r, 4000));
-            if (gen !== deployPollGen) return;
-            let live2 = null;
-            try { live2 = await fetchLiveDeployId(); } catch {}
-            if (gen !== deployPollGen) return;
-            if (live2 === expectedId) {
-                setDeployBadge('live', '<i class="fas fa-check-circle"></i> Сайт обновлён');
-                showStatus('✓ GitHub Pages задеплоил изменения — сайт обновлён!', 'success');
-                return;
-            }
-        }
-        setDeployBadge('pending', '<i class="fas fa-clock"></i> Долгий деплой');
-    } catch (e) {
-        if (gen !== deployPollGen) return;
-        setDeployBadge('unknown', '<i class="fas fa-question-circle"></i> Не проверить');
-    }
-}
-
-const b64d = b => {
-    try { return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0))); }
-    catch (e) { return atob(b); }
-};
-const b64e = s => {
-    const bytes = new TextEncoder().encode(s);
-    let result = '';
-    for (let i = 0; i < bytes.length; i += 8192) result += String.fromCharCode(...bytes.subarray(i, i + 8192));
-    return btoa(result);
-};
-const keepWs = (old, nv) => old.match(/^\s*/)[0] + nv.trim() + old.match(/\s*$/)[0];
-
-function showStatus(msg, type = 'success') {
-    const bar = $('statusBar');
-    clearTimeout(statusTimer);
-    bar.textContent = msg;
-    bar.className = 'status-bar show ' + type;
-    statusTimer = setTimeout(() => bar.classList.remove('show'), 4500);
-}
-
-function markUnsaved() { $('unsavedBadge').classList.toggle('show', Object.keys(pending).length > 0); }
-
-async function gh(url, opts = {}) {
-    const res = await fetch(url, {
-        ...opts, cache: 'no-store',
-        headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', ...(opts.headers || {}) }
-    });
-    if (!res.ok) {
-        const raw = await res.text();
-        let msg = raw;
-        try { msg = (JSON.parse(raw)).message || raw; } catch {}
-        const err = new Error(`HTTP ${res.status}: ${msg}`);
-        err.status = res.status; err.body = msg;
-        throw err;
-    }
-    return res;
-}
-
-async function getFile(path) {
-    const url = `${API}/contents/${encPath(path)}?ref=${encodeURIComponent(CMS_CONFIG.branch)}`;
-    const d = await (await gh(url)).json();
-    let text;
-    if (d.encoding === 'base64' && d.content) text = b64d(d.content);
-    else text = await (await gh(url, { headers: { 'Accept': 'application/vnd.github.raw+json' } })).text();
-    return { text, sha: d.sha };
-}
-
-async function getSha(path) {
-    try { return (await (await gh(`${API}/contents/${encPath(path)}?ref=${encodeURIComponent(CMS_CONFIG.branch)}`)).json()).sha; }
-    catch (e) { if (e.status === 404) return null; throw e; }
-}
-
-async function putFile(path, b64, sha, message) {
-    const body = { message: message || `Обновление ${path}`, content: b64, branch: CMS_CONFIG.branch };
-    if (sha) body.sha = sha;
-    return (await gh(`${API}/contents/${encPath(path)}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    })).json();
-}
-
-function interpretError(status, body = '') {
-    const b = String(body);
-    if (status === 401) return { title: 'Токен недействителен или истёк', fix: 'Создайте новый токен и войдите заново.' };
-    if (status === 403 || status === 429) {
-        if (/rate limit/i.test(b)) return { title: 'Превышен лимит запросов GitHub API', fix: 'Подождите минуту и повторите.' };
-        if (/scope|permission|not accessible/i.test(b)) return { title: 'У токена нет нужных прав', fix: 'Создайте НОВЫЙ токен с правами Contents: Read and write на этот репозиторий.' };
-        return { title: 'Доступ запрещён', fix: 'Проверьте, что токен выдан на этот репозиторий и имеет право записи.' };
-    }
-    if (status === 404) return { title: 'Репозиторий или файл не найден', fix: `Проверьте имя файла и ветку "${CMS_CONFIG.branch}".` };
-    if (status === 409) return { title: 'Конфликт версий (файл был изменён)', fix: 'Кто-то изменил файл в репозитории. Нажмите "Обновить" и примените правки заново.' };
-    if (status === 422) return { title: 'Ошибка валидации', fix: 'Файл уже существует или данные некорректны. Попробуйте "Переподготовить".' };
-    return { title: 'Ошибка запроса', fix: 'Проверьте интернет-соединение и повторите. Если не помогает — создайте новый токен.' };
-}
-
-function showErrorDetails(title, status, body, fix) {
-    $('errorDetails').innerHTML = `<div class="error-details">
-        <div class="err-title"><i class="fas fa-exclamation-triangle" style="color: #ff4444;"></i> ${esc(title)}</div>
-        <div class="err-status">Код: ${esc(status)}</div>
-        <div style="color: #888; font-size: 12px; margin-bottom: 8px;">${esc(body)}</div>
-        <div class="err-fix"><i class="fas fa-check-circle"></i> ${esc(fix)}</div>
-    </div>`;
-}
-
-async function checkToken() {
-    const box = $('tokenInfo');
-    box.textContent = 'Проверка токена...';
-    $('errorDetails').innerHTML = '';
-    try {
-        const user = await (await gh('https://api.github.com/user')).json();
-        const repo = await (await gh(API)).json();
-        let hasIndex = true;
-        try { await gh(`${API}/contents/index.html?ref=${encodeURIComponent(CMS_CONFIG.branch)}`); } catch { hasIndex = false; }
-        const canPush = repo.permissions ? !!repo.permissions.push : null;
-        box.innerHTML = `
-            <div class="token-info"><span class="label"><i class="fas fa-check-circle" style="color: #00cc66;"></i> Пользователь:</span> ${esc(user.login)}</div>
-            <div class="token-info" style="margin-top: 8px;"><span class="label"><i class="fas fa-check-circle" style="color: #00cc66;"></i> Репозиторий:</span> ${esc(repo.full_name)} (${repo.private ? 'приватный' : 'публичный'})</div>
-            <div class="token-info" style="margin-top: 8px;"><span class="label"><i class="fas fa-${canPush === false ? 'times-circle' : 'check-circle'}" style="color: ${canPush === false ? '#ff4444' : '#00cc66'};"></i> Запись в репозиторий:</span> ${canPush === null ? 'нет данных' : canPush ? 'есть' : 'НЕТ — сохранение не удастся'}</div>
-            <div class="token-info" style="margin-top: 8px;"><span class="label"><i class="fas fa-${hasIndex ? 'check-circle' : 'exclamation-circle'}" style="color: ${hasIndex ? '#00cc66' : '#ff9900'};"></i> index.html в ветке ${esc(CMS_CONFIG.branch)}:</span> ${hasIndex ? 'найден' : 'НЕ НАЙДЕН'}</div>
-        `;
-        if (canPush === false) showErrorDetails('Нет прав записи', 'WARNING', '', 'Выдайте токену право Contents: Read and write на этот репозиторий.');
-        else if (!hasIndex) showErrorDetails('Файл index.html не найден', '404', `Ветка "${CMS_CONFIG.branch}" или файл не существует`, 'Создайте index.html в корне репозитория или проверьте ветку в config.js.');
-        const ok = hasIndex && canPush !== false;
-        showStatus(ok ? 'Токен валиден' : 'Есть проблемы — см. подробности', ok ? 'success' : 'error');
-        return ok;
-    } catch (e) {
-        const i = interpretError(e.status, e.body);
-        box.innerHTML = `<div class="token-info"><span class="label"><i class="fas fa-times-circle" style="color: #ff4444;"></i> Ошибка:</span> ${esc(e.message)}</div>`;
-        showErrorDetails(i.title, e.status || 'сеть', e.body || e.message, i.fix);
-        showStatus('✗ ' + i.title, 'error');
-        return false;
-    }
-}
-
-async function login() {
-    const t = $('tokenInput').value.trim();
-    if (!t) return;
-    const btn = $('loginBtn');
-    btn.disabled = true; btn.textContent = 'Проверка...';
-    token = t;
-    try {
-        await gh('https://api.github.com/user');
-        ss.set('gh_token', t);
-        enterApp();
-    } catch (e) {
-        token = null;
-        const i = interpretError(e.status, e.body);
-        $('loginError').innerHTML = `<strong>${esc(i.title)}</strong><br><small>${esc(i.fix)}</small>`;
-        $('loginError').classList.add('show');
-        btn.disabled = false; btn.textContent = 'Войти';
-    }
-}
-
-$('loginBtn').addEventListener('click', login);
-$('tokenInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-
-async function enterApp() {
-    $('loginScreen').style.display = 'none';
-    $('editorApp').classList.add('active');
-    updatePageIndicator();
-    try {
-        let f;
-        try { f = await getFile(currentFile); }
-        catch (e) {
-            if (e.status === 404 && currentFile !== 'index.html') {
-                showStatus(`⚠ Файл "${currentFile}" не найден — переключаемся на index.html`, 'info');
-                currentFile = 'index.html'; saveCurrentFile(); updatePageIndicator();
-                f = await getFile(currentFile);
-            } else throw e;
-        }
-        if (isAdminSelf(currentFile)) {
-            showSetup();
-            showErrorDetails('Админка лежит в корне сайта', 'CONFIG', 'Текущий файл совпадает с файлом самой админ-панели.', 'Переместите этот файл в папку admin/ (admin/index.html), а сайт оставьте в корневом index.html. Иначе редактор будет править сам себя.');
-            return;
-        }
-        if (f.text.includes('data-edit="')) {
-            repoDeployId = readDeployId(f.text);
-            showEditor();
-        } else { showSetup(); await checkToken(); }
-    } catch (e) {
-        showSetup();
-        if (e.status === 404) showErrorDetails('Файл не найден', 404, `В репозитории ${CMS_CONFIG.owner}/${CMS_CONFIG.repo} ветка ${CMS_CONFIG.branch}`, 'Проверьте имя файла.');
-        else if (e.status === 401 || e.status === 403) await checkToken();
-        else { const i = interpretError(e.status, e.body); showErrorDetails(i.title, e.status || 'unknown', e.body || e.message, i.fix); }
-    }
-}
-
-if (token) enterApp();
-
-// ИСПРАВЛЕНО (п.6 Claude): pending = {} перед reload, чтобы не было двойного подтверждения
-function logout() {
-    if (Object.keys(pending).length && !confirm('Есть несохранённые изменения. Выйти?')) return;
-    ss.del('gh_token');
-    ls.del('cms_currentFile');
-    pending = {};
-    location.reload();
-}
-
-// ИСПРАВЛЕНО (п.8 Claude): сброс заголовка экрана подготовки
-function showSetup() {
-    $('setupScreen').classList.add('active');
-    $('iframeWrapper').style.display = 'none';
-    $('hintBanner').style.display = 'none';
-    $('prepareBtn').disabled = false;
-    $('prepareBtn').innerHTML = '<i class="fas fa-download"></i> Подготовить страницу';
-    $('setupTitle').textContent = 'Подготовка ' + currentFile;
-}
-
-function showEditor() {
-    $('setupScreen').classList.remove('active');
-    $('iframeWrapper').style.display = 'block';
-    $('hintBanner').style.display = 'block';
-    loadSite();
-}
-
-function buildPreviewHtml(text) {
-    const d = new DOMParser().parseFromString(text, 'text/html');
-    d.querySelectorAll('meta[http-equiv="refresh" i]').forEach(n => n.remove());
-    d.querySelectorAll('base').forEach(b => b.remove());
-    const base = d.createElement('base');
-    base.setAttribute('href', pageUrl().href);
-    d.head.insertBefore(base, d.head.firstChild);
-    return '<!DOCTYPE html>\n' + d.documentElement.outerHTML;
-}
-
-async function loadSite(skipVerify = false) {
-    viewModeUrl = null;
-    updatePageIndicator();
-    const ifr = $('siteIframe');
-    const loader = $('iframeLoader');
-    const status = $('loaderStatus');
-    loader.classList.remove('hidden');
-    ifr.setAttribute('sandbox', PREVIEW_SANDBOX);
-    status.textContent = 'Загрузка ' + currentFile + ' из GitHub...';
-    try {
-        const f = await getFile(currentFile);
-        status.textContent = 'Подготовка превью...';
-        repoDeployId = readDeployId(f.text);
-        const html = buildPreviewHtml(f.text);
-        ifr.onload = () => {
-            hookIframe();
-            loader.classList.add('hidden');
-            if (!skipVerify) verifyDeploy(repoDeployId, true);
-        };
-        ifr.srcdoc = html;
-    } catch (e) {
-        status.textContent = 'Ошибка: ' + e.message;
-        setTimeout(() => {
-            ifr.removeAttribute('srcdoc');
-            ifr.onload = () => { hookIframe(); loader.classList.add('hidden'); };
-            ifr.src = pageUrl().href + '?t=' + Date.now();
-        }, 1000);
-    }
-}
-
-function reloadPreview() {
-    if (Object.keys(pending).length) {
-        if (!confirm('Несохранённые правки в превью пропадут. Обновить?')) return;
-        pending = {}; markUnsaved();
-    }
-    loadSite();
-    showStatus('Обновляем превью...', 'info');
-}
-
-function isInternalPage(href) {
-    if (href === undefined || href === null) return false;
-    if (href.trim().startsWith('#')) return false;
-    if (href === '' || href === '/' || href === './') return true;
-    const clean = href.split(/[?#]/)[0];
-    if (/^(tel:|mailto:|javascript:|data:)/i.test(clean)) return false;
-    if (!/^(https?:|\/\/)/i.test(clean)) {
-        if (clean === '' || clean === '.') return true;
-        if (clean.endsWith('/')) return true;
-        if (clean.startsWith('/') && clean.replace(/\/+$/, '') === siteBasePathNoSlash()) return true;
-        return /\.html?$/i.test(clean);
-    }
-    try {
-        const url = new URL(clean.startsWith('//') ? 'https:' + clean : clean);
-        const base = new URL(siteBaseUrl);
-        if (url.hostname !== base.hostname) return false;
-        const normalizedUrlPath = url.pathname.replace(/\/+$/, '');
-        const normalizedBasePath = base.pathname.replace(/\/+$/, '');
-        if (normalizedUrlPath === normalizedBasePath) return true;
-        if (normalizedBasePath && !url.pathname.startsWith(normalizedBasePath + '/')) return false;
-        return /\.html?$/i.test(url.pathname);
-    } catch { return false; }
-}
-
-function normalizePagePath(href) {
-    if (href === '' || href === '/' || href === './') return 'index.html';
-    let p = href.split(/[?#]/)[0];
-    if (/^(https?:|\/\/)/i.test(p)) {
-        try {
-            const u = new URL(p.startsWith('//') ? 'https:' + p : p);
-            const basePathNoSlash = siteBasePathNoSlash();
-            const up = u.pathname.replace(/\/+$/, '');
-            if (up === basePathNoSlash) return 'index.html';
-            p = u.pathname;
-        } catch {}
-        try { p = decodeURIComponent(p); } catch {}
-        if (siteBasePath !== '/' && p.startsWith(siteBasePath)) p = p.slice(siteBasePath.length);
-        p = p.replace(/^\/+/, '');
-    } else {
-        try { p = decodeURIComponent(p); } catch {}
-        if (p.startsWith('/')) {
-            const basePathNoSlash = siteBasePathNoSlash();
-            const pp = p.replace(/\/+$/, '');
-            if (pp === basePathNoSlash) return 'index.html';
-            if (siteBasePath !== '/' && p.startsWith(siteBasePath)) p = p.slice(siteBasePath.length);
-            p = p.replace(/^\/+/, '');
-        } else {
-            if (p === '' || p === '.') return 'index.html';
-            if (p.endsWith('/')) {
-                const resolved = resolveRepoPath(p + 'index.html');
-                return resolved || 'index.html';
-            }
-            const r = resolveRepoPath(p);
-            p = r || '';
-        }
-    }
-    p = p.replace(/^(\.\/)+/, '');
-    if (!p || p === '.') return 'index.html';
-    if (p.split('/').some(s => s === '..')) return '';
-    return p;
-}
-
-async function prepareCurrentFile(logContainer = null) {
-    const btn = $('prepareBtn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Подготовка...'; }
-    const fileBeingPrepared = currentFile;
-    const li = (msg, type = '') => {
-        if (logContainer) {
-            const div = document.createElement('div');
-            div.className = 'log-item ' + type;
-            div.textContent = (type === 'done' ? '✓ ' : type === 'error' ? '✗ ' : '→ ') + msg;
-            logContainer.appendChild(div);
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-    };
-    try {
-        if (isAdminSelf(fileBeingPrepared)) {
-            li('⚠ Операция отменена: это файл самой админ-панели', 'error');
-            showStatus('Админку нельзя редактировать через саму себя. Переместите её в папку admin/.', 'error');
-            return false;
-        }
-        li('Загрузка ' + fileBeingPrepared + ' из репозитория...', 'working');
-        const f = await getFile(fileBeingPrepared);
-        if (!f.text.trim()) throw new Error(fileBeingPrepared + ' пуст или не прочитан');
-        li(`${fileBeingPrepared} загружен (${(f.text.length / 1024).toFixed(1)} КБ)`, 'done');
-        if (f.text.includes('data-edit="') || f.text.includes('data-img=')) {
-            li('Обнаружены старые метки — очищаем...', 'working');
-            const cleaned = cleanHtmlMarks(f.text);
-            f.text = cleaned.html;
-            li(`Удалено: ${cleaned.removedEdit} text-меток и ${cleaned.removedImg} img-меток`, 'done');
-        }
-        li('Анализ контента и расстановка меток...', 'working');
-        const r = processHtml(f.text);
-        li(`Найдено ${r.textCount} текстов и ${r.imgCount} картинок`, 'done');
-        li('Сохранение подготовленного ' + fileBeingPrepared + '...', 'working');
-        const deployId = newDeployId();
-        const stamped = stampDeployId(r.html, deployId);
-        await putFile(fileBeingPrepared, b64e(stamped), f.sha, `Подготовка ${fileBeingPrepared} к редактированию`);
-        repoDeployId = deployId;
-        li(fileBeingPrepared + ' обновлён в репозитории', 'done');
-        li('Подготовка завершена!', 'done');
-        return true;
-    } catch (e) {
-        li('Ошибка: ' + e.message, 'error');
-        const i = interpretError(e.status, e.body);
-        showErrorDetails(i.title, e.status || 'ошибка', e.body || e.message, i.fix);
-        showStatus(`✗ ${i.title}`, 'error');
-        return false;
-    } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Подготовить страницу'; }
-    }
-}
-
-async function prepareSite() {
-    const log = $('progressLog');
-    log.style.display = 'block'; log.innerHTML = '';
-    $('errorDetails').innerHTML = '';
-    const ok = await prepareCurrentFile(log);
-    if (ok) setTimeout(() => { showStatus('Страница подготовлена! Открываем редактор...'); setTimeout(showEditor, 500); }, 300);
-}
-
-// ИСПРАВЛЕНО (п.4 Claude): восстановление viewModeUrl и showEditor() при ошибке
-async function navigateTo(href) {
-    const cleanPath = normalizePagePath(href);
-    if (!cleanPath) { showStatus('Не удалось определить страницу по ссылке: ' + href, 'error'); return; }
-    if (isAdminSelf(cleanPath)) {
-        showStatus('⚠ Это файл самой админ-панели — редактировать его нельзя.', 'error');
-        return;
-    }
-    if (cleanPath === currentFile && !viewModeUrl) { reloadPreview(); return; }
-    if (Object.keys(pending).length) {
-        if (!confirm('Есть несохранённые правки. При переходе они будут потеряны. Продолжить?')) return;
-        pending = {}; markUnsaved();
-    }
-    const prevFile = currentFile;
-    const prevView = viewModeUrl;
-    currentFile = cleanPath;
-    saveCurrentFile();
-    viewModeUrl = null;
-    updatePageIndicator();
-    showStatus('Открываю ' + cleanPath + '...', 'info');
-    try {
-        const f = await getFile(currentFile);
-        if (f.text.includes('data-edit="')) {
-            repoDeployId = readDeployId(f.text);
-            showEditor();
-            showStatus('✓ ' + cleanPath + ' открыта для редактирования', 'success');
-        } else {
-            showSetup();
-            $('setupTitle').textContent = 'Подготовка ' + cleanPath;
-            $('errorDetails').innerHTML = '';
-            const log = $('progressLog');
-            log.style.display = 'block'; log.innerHTML = '';
-            showStatus('Страница не подготовлена — подготавливаю ' + cleanPath + '...', 'info');
-            const ok = await prepareCurrentFile(log);
-            if (ok) {
-                showEditor();
-                showStatus('✓ Страница ' + cleanPath + ' готова к редактированию!', 'success');
-            } else {
-                currentFile = prevFile;
-                viewModeUrl = prevView;
-                saveCurrentFile();
-                updatePageIndicator();
-                $('setupScreen').classList.remove('active');
-                showEditor();
-            }
-        }
-    } catch (e) {
-        const i = interpretError(e.status, e.body);
-        showStatus('✗ Не удалось открыть ' + cleanPath + ': ' + i.title, 'error');
-        currentFile = prevFile;
-        viewModeUrl = prevView;
-        saveCurrentFile();
-        updatePageIndicator();
-        $('setupScreen').classList.remove('active');
-        showEditor();
-    }
-}
-
-function openExternalInIframe(url) {
-    viewModeUrl = url;
-    updatePageIndicator();
-    const ifr = $('siteIframe');
-    $('iframeLoader').classList.remove('hidden');
-    $('loaderStatus').textContent = 'Открываю ссылку в режиме просмотра...';
-    ifr.setAttribute('sandbox', VIEW_SANDBOX);
-    ifr.removeAttribute('srcdoc');
-    ifr.onload = () => { $('iframeLoader').classList.add('hidden'); };
-    ifr.src = url;
-    showStatus('Режим просмотра: редактирование недоступно. Нажмите «Домой» для возврата.', 'info');
-}
-
-function goHome() {
-    if (currentFile === 'index.html' && !viewModeUrl) { reloadPreview(); return; }
-    navigateTo('index.html');
-}
-
-function openLiveSite() { window.open(viewModeUrl ? viewModeUrl : pageUrl().href, '_blank', 'noopener'); }
-
-function hookIframe() {
-    let d;
-    try { d = $('siteIframe').contentDocument; } catch { d = null; }
-    if (!d || !d.head) {
-        showStatus('Нет доступа к превью (sandbox)', 'error');
-        return;
-    }
-    const st = d.createElement('style');
-    st.textContent = `[data-edit]:hover, [data-img]:hover { outline: 2px dashed #F40009; outline-offset: 2px; cursor: pointer; }`;
-    d.head.appendChild(st);
-
-    function hideLoadedPlaceholders() {
-        d.querySelectorAll('.placeholder-label').forEach(ph => {
-            const holder = ph.parentElement;
-            if (!holder) return;
-            const img = holder.querySelector('img');
-            if (!img) return;
-            const hide = () => {
-                if (img.complete && img.naturalWidth > 0) ph.style.display = 'none';
-            };
-            if (img.complete) hide();
-            img.addEventListener('load', hide);
-            img.addEventListener('error', () => { if (ph.style.display !== 'none') ph.style.display = ''; });
+    <script>
+        // Бургер-меню
+        const menuToggle = document.getElementById('menuToggle');
+        const navLinks = document.getElementById('navLinks');
+        menuToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('open');
+            menuToggle.querySelector('i').className = navLinks.classList.contains('open') ? 'fas fa-xmark' : 'fas fa-bars';
         });
-    }
-    hideLoadedPlaceholders();
+        navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+            navLinks.classList.remove('open');
+            menuToggle.querySelector('i').className = 'fas fa-bars';
+        }));
 
-    const handleModifierOpen = ev => {
-        const linkEl = ev.target.closest && ev.target.closest('a[href]');
-        if (!linkEl) return false;
-        ev.preventDefault(); ev.stopPropagation();
-        openSafe((linkEl.getAttribute('href') || '').trim());
-        return true;
-    };
-
-    d.addEventListener('auxclick', ev => { if (ev.button === 1) handleModifierOpen(ev); }, true);
-
-    d.addEventListener('click', ev => {
-        if (ev.altKey) {
-            const linkEl = ev.target.closest && ev.target.closest('a[href]');
-            if (linkEl) {
-                ev.preventDefault();
-                ev.stopPropagation();
-                const href = (linkEl.getAttribute('href') || '').trim();
-                if (href === '') return;
-                if (/^(tel:|mailto:)/i.test(href)) { openSafe(href); return; }
-                if (href.startsWith('#')) {
-                    const id = href.slice(1);
-                    const target = id ? (d.getElementById(id) || d.querySelector(`[name="${CSS.escape(id)}"]`)) : null;
-                    if (target) target.scrollIntoView({ behavior: 'smooth' });
-                    return;
-                }
-                if (isInternalPage(href)) { navigateTo(href); return; }
-                const abs = safeAbs(href);
-                if (abs && /^https?:/i.test(abs)) openExternalInIframe(abs);
-                return;
-            }
-            ev.preventDefault();
-            return;
-        }
-        if (ev.ctrlKey || ev.metaKey) {
-            if (handleModifierOpen(ev)) return;
-        }
-        const textEl = ev.target.closest && ev.target.closest('[data-edit]');
-        if (textEl) { ev.preventDefault(); ev.stopPropagation(); openText(textEl.getAttribute('data-edit'), textEl.textContent); return; }
-        const imgEl = ev.target.closest && ev.target.closest('[data-img]');
-        if (imgEl) {
-            ev.preventDefault(); ev.stopPropagation();
-            const path = imgEl.getAttribute('data-img');
-            const imgId = imgEl.getAttribute('data-img-id') || '';
-            const actualImg = imgEl.tagName === 'IMG' ? imgEl : imgEl.querySelector('img');
-            openImage(path, actualImg ? (actualImg.currentSrc || actualImg.src) : '', imgId);
-            return;
-        }
-        const linkEl = ev.target.closest && ev.target.closest('a[href]');
-        if (linkEl) ev.preventDefault();
-    }, true);
-    d.addEventListener('keydown', ev => { if (ev.key === 'Escape') closePanel(); });
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('editPanel').classList.contains('active')) closePanel(); });
-
-function syncHref(el, newValue) {
-    const link = el.closest('a[href]');
-    if (!link || link.hasAttribute('data-cms-link')) return;
-    const href = link.getAttribute('href') || '';
-    const v = newValue.trim();
-    if (/^tel:/i.test(href)) {
-        const clean = v.replace(/[^\d+]/g, '');
-        if (clean.length >= 7) link.setAttribute('href', 'tel:' + clean);
-        return;
-    }
-    if (/^mailto:/i.test(href)) {
-        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) link.setAttribute('href', 'mailto:' + v);
-        return;
-    }
-    let host = '';
-    try { host = new URL(href, 'https://x.invalid').hostname.replace(/^www\./, '').toLowerCase(); } catch { return; }
-    if (host === 't.me' || host === 'telegram.me') {
-        const u = v.replace(/^@/, '').replace(/^https?:\/\/(t\.me|telegram\.me)\//, '');
-        if (/^[a-zA-Z0-9_]{3,}$/.test(u)) link.setAttribute('href', 'https://t.me/' + u);
-    } else if (host === 'wa.me') {
-        const clean = v.replace(/[^\d]/g, '');
-        if (clean.length >= 7) link.setAttribute('href', 'https://wa.me/' + clean);
-    } else if (host === 'vk.com') {
-        const u = v.replace(/^@/, '').replace(/^https?:\/\/(www\.)?vk\.com\//, '');
-        if (/^[a-zA-Z0-9_.]+$/.test(u)) link.setAttribute('href', 'https://vk.com/' + u);
-    } else if (host === 'instagram.com') {
-        const u = v.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '');
-        if (/^[a-zA-Z0-9_.]+$/.test(u)) link.setAttribute('href', 'https://instagram.com/' + u);
-    }
-}
-
-function findImgTargets(doc, key, path) {
-    if (!doc) return [];
-    if (key && /^img_\d+$/.test(key)) {
-        const el = doc.querySelector(`[data-img-id="${CSS.escape(key)}"]`);
-        return el ? [el] : [];
-    }
-    const lookupPath = path || key;
-    if (!lookupPath) return [];
-    return Array.from(doc.querySelectorAll(`[data-img="${CSS.escape(lookupPath)}"]`));
-}
-
-function readTextLink(key) {
-    const dflt = { url: '', linkColor: 'inherit', linkTarget: '_blank' };
-    let d = null;
-    try { d = $('siteIframe').contentDocument; } catch {}
-    if (!d) return dflt;
-    const el = d.querySelector(`[data-edit="${CSS.escape(key)}"]`);
-    if (!el) return dflt;
-    const link = el.closest('a[data-cms-link]');
-    if (!link) return dflt;
-    const storedColor = link.getAttribute('data-link-color') || 'inherit';
-    const target = link.getAttribute('target') || '_blank';
-    return {
-        url: link.getAttribute('href') || '',
-        linkColor: LINK_COLORS[storedColor] !== undefined ? storedColor : 'inherit',
-        linkTarget: target === '_self' ? '_self' : '_blank'
-    };
-}
-
-function readImageLink(key, path) {
-    let d = null;
-    try { d = $('siteIframe').contentDocument; } catch {}
-    if (!d) return { url: '', linkTarget: '_blank' };
-    const targets = findImgTargets(d, key, path);
-    if (!targets.length) return { url: '', linkTarget: '_blank' };
-    const target = targets[0];
-    let linkEl = target.tagName === 'A' ? target : (target.closest ? target.closest('a') : null);
-    if (!linkEl && target.querySelector) {
-        const inner = target.querySelector('img');
-        linkEl = inner ? inner.closest('a') : null;
-    }
-    if (!linkEl) return { url: '', linkTarget: '_blank' };
-    if (!linkEl.hasAttribute('data-cms-link')) return { url: '', linkTarget: '_blank' };
-    const href = linkEl.getAttribute('href') || '';
-    const targetAttr = linkEl.getAttribute('target') || '_blank';
-    return { url: href, linkTarget: targetAttr === '_self' ? '_self' : '_blank' };
-}
-
-function applyLinkToText(doc, el, url, keepColor, linkColor, linkTarget) {
-    if (!el) return;
-    let link = el.closest ? el.closest('a') : null;
-    if (url && url.trim()) {
-        url = url.trim();
-        if (!link) {
-            link = doc.createElement('a');
-            el.parentNode.insertBefore(link, el);
-            link.appendChild(el);
-        }
-        link.setAttribute('data-cms-link', '1');
-        link.setAttribute('href', url);
-        link.setAttribute('target', linkTarget === '_self' ? '_self' : '_blank');
-        if (linkTarget === '_blank') link.setAttribute('rel', 'noopener');
-        else link.removeAttribute('rel');
-        const colorKey = linkColor && LINK_COLORS[linkColor] !== undefined ? linkColor : 'inherit';
-        link.setAttribute('data-link-color', colorKey);
-        if (colorKey === 'inherit' || keepColor) {
-            link.style.color = 'inherit';
-            link.style.textDecoration = 'none';
-            if (keepColor) link.setAttribute('data-keep-color', '1');
-            else link.removeAttribute('data-keep-color');
-        } else {
-            link.removeAttribute('data-keep-color');
-            link.style.color = LINK_COLORS[colorKey];
-            link.style.textDecoration = 'underline';
-        }
-    } else if (link && link.hasAttribute('data-cms-link')) {
-        link.parentNode.insertBefore(el, link);
-        if (link.textContent.trim() === '' && !link.querySelector('img, [data-edit], [data-img]')) {
-            link.parentNode.removeChild(link);
-        } else {
-            ['data-cms-link', 'data-keep-color', 'data-link-color', 'href', 'target', 'rel'].forEach(a => link.removeAttribute(a));
-            link.style.color = '';
-            link.style.textDecoration = '';
-        }
-    }
-}
-
-function applyLinkToImage(doc, target, url, linkTarget = '_blank') {
-    if (!target) return;
-    const isA = target.tagName === 'A';
-    const findInner = () => {
-        if (!target.querySelector) return null;
-        const img = target.querySelector('img');
-        const a = img ? img.closest('a') : null;
-        return a && target.contains(a) ? a : null;
-    };
-    if (!url || !url.trim()) {
-        const link = isA ? target : ((target.closest && target.closest('a')) || findInner());
-        if (!link) return;
-        if (link === target) {
-            ['href', 'target', 'rel', 'data-cms-link'].forEach(a => link.removeAttribute(a));
-            return;
-        }
-        while (link.firstChild) link.parentNode.insertBefore(link.firstChild, link);
-        link.parentNode.removeChild(link);
-        return;
-    }
-    url = url.trim();
-    let link = isA ? target : ((target.closest && target.closest('a')) || findInner());
-    if (!link) {
-        const hasInnerA = target.querySelector && target.querySelector('a');
-        const wrapNode = hasInnerA ? (target.querySelector('img') || target) : target;
-        link = doc.createElement('a');
-        wrapNode.parentNode.insertBefore(link, wrapNode);
-        link.appendChild(wrapNode);
-    }
-    link.setAttribute('data-cms-link', '1');
-    link.setAttribute('href', url);
-    link.setAttribute('target', linkTarget === '_self' ? '_self' : '_blank');
-    if (linkTarget === '_blank') link.setAttribute('rel', 'noopener');
-    else link.removeAttribute('rel');
-}
-
-function cleanHtmlMarks(html) {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const beforeEdit = doc.querySelectorAll('[data-edit]').length;
-    const beforeImg = doc.querySelectorAll('[data-img]').length;
-    doc.querySelectorAll('[data-edit]').forEach(el => {
-        const parent = el.parentNode;
-        if (!parent) return;
-        const pure = el.tagName === 'SPAN' && el.attributes.length === 1;
-        if (pure) {
-            while (el.firstChild) parent.insertBefore(el.firstChild, el);
-            parent.removeChild(el);
-        } else el.removeAttribute('data-edit');
-    });
-    doc.querySelectorAll('[data-img], [data-img-id]').forEach(el => {
-        el.removeAttribute('data-img');
-        el.removeAttribute('data-img-id');
-    });
-    doc.body.normalize();
-    return { html: '<!DOCTYPE html>\n' + doc.documentElement.outerHTML, removedEdit: beforeEdit, removedImg: beforeImg };
-}
-
-function processHtml(html) {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    let textCounter = 0;
-    doc.querySelectorAll('[data-edit^="auto_"]').forEach(el => {
-        const m = el.getAttribute('data-edit').match(/^auto_(\d+)$/);
-        if (m) {
-            const n = parseInt(m[1], 10);
-            if (n > textCounter) textCounter = n;
-        }
-    });
-    const SKIP_TAGS = new Set(['script', 'style', 'title', 'meta', 'noscript', 'input', 'textarea', 'select', 'option', 'head', 'link', 'template']);
-    const extra = (CMS_CONFIG.extraEditableSelectors || []).concat('[data-editable]').join(', ');
-    const forced = new Set();
-    try { doc.querySelectorAll(extra).forEach(el => forced.add(el)); } catch {}
-
-    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
-        acceptNode(node) {
-            const parent = node.parentElement;
-            if (!parent) return NodeFilter.FILTER_REJECT;
-            if (parent.namespaceURI !== XHTML_NS) return NodeFilter.FILTER_REJECT;
-            if (parent.closest('svg, math, script, style, textarea, select, noscript, template')) return NodeFilter.FILTER_REJECT;
-            if (!forced.has(parent) && SKIP_TAGS.has(parent.tagName.toLowerCase())) return NodeFilter.FILTER_REJECT;
-            if (parent.hasAttribute('data-edit')) return NodeFilter.FILTER_REJECT;
-            const text = node.textContent;
-            if (!text || !text.trim()) return NodeFilter.FILTER_REJECT;
-            return /[\p{L}\p{N}]/u.test(text) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-        }
-    });
-    const nodesToProcess = [];
-    let node;
-    while (node = walker.nextNode()) nodesToProcess.push(node);
-    let textCount = 0;
-    nodesToProcess.forEach(textNode => {
-        const span = doc.createElement('span');
-        span.setAttribute('data-edit', `auto_${++textCounter}`);
-        span.textContent = textNode.textContent;
-        textNode.parentElement.replaceChild(span, textNode);
-        textCount++;
-    });
-    doc.querySelectorAll('[data-editable]').forEach(el => el.removeAttribute('data-editable'));
-
-    const CORE_IMAGE_WRAPPERS = [
-        '.img-wrapper', '.gallery-item', '.team-photo',
-        '.about-img-wrapper', '.hero-img-wrapper', '.product-image',
-        '.portfolio-card', '.space-card', '.portfolio-item'
-    ];
-    const wrapperSelector = [...CORE_IMAGE_WRAPPERS, ...(CMS_CONFIG.imageWrappers || [])].join(', ');
-    let imgCount = 0, imgIdCounter = 0;
-    doc.querySelectorAll('img').forEach(img => {
-        if (img.hasAttribute('data-img')) return;
-        const src = img.getAttribute('src');
-        if (!src || /^(data:|blob:|https?:|\/\/)/i.test(src)) return;
-        const path = resolveRepoPath(src);
-        if (!path) return;
-        let wrapper = null;
-        try { wrapper = img.closest(wrapperSelector); } catch {}
-        if (wrapper && wrapper.hasAttribute('data-img')) return;
-        const imgId = 'img_' + (++imgIdCounter);
-        const holder = wrapper || img;
-        holder.setAttribute('data-img', path);
-        holder.setAttribute('data-img-id', imgId);
-        imgCount++;
-    });
-    return { html: '<!DOCTYPE html>\n' + doc.documentElement.outerHTML, textCount, imgCount };
-}
-
-async function cleanMarks() {
-    if (Object.keys(pending).length > 0) {
-        if (!confirm('У вас есть несохранённые правки. Они будут потеряны при очистке. Продолжить?')) return;
-        pending = {}; markUnsaved();
-    }
-    if (!confirm('Удалить ВСЕ метки редактирования (data-edit, data-img, data-img-id) из ' + currentFile + '?\n\nПравки текстов и ручные ссылки СОХРАНЯТСЯ.\nПосле очистки нужно снова нажать «Подготовить страницу».\n\nПродолжить?')) return;
-    const btn = $('cleanBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Очищаю...';
-    try {
-        showStatus('Загружаю ' + currentFile + '...', 'info');
-        const f = await getFile(currentFile);
-        if (!f.text.includes('data-edit="') && !f.text.includes('data-img=')) {
-            showStatus('Меток в файле нет — очищать нечего', 'info');
-            return;
-        }
-        showStatus('Удаляю метки...', 'info');
-        const result = cleanHtmlMarks(f.text);
-        const deployId = newDeployId();
-        const stamped = stampDeployId(result.html, deployId);
-        showStatus('Сохраняю очищенный файл...', 'info');
-        await putFile(currentFile, b64e(stamped), f.sha, `Очистка меток редактирования в ${currentFile}`);
-        repoDeployId = deployId;
-        showStatus(`✓ Очищено: ${result.removedEdit} text-меток и ${result.removedImg} img-меток.`, 'success');
-        setTimeout(() => { showSetup(); $('setupTitle').textContent = 'Страница очищена — готова к подготовке'; }, 1500);
-    } catch (e) {
-        const i = interpretError(e.status, e.body);
-        showStatus(`✗ Ошибка: ${i.title}`, 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-broom"></i> Очистить метки';
-    }
-}
-
-function openPanel(title, key) {
-    lastFocus = document.activeElement;
-    $('editTitle').textContent = title;
-    $('editKey').textContent = key;
-    $('editPanel').classList.add('active');
-}
-
-function openText(key, value) {
-    editKind = 'text'; editKey = key;
-    openPanel('Редактирование текста', key);
-    const linkData = readTextLink(key);
-    editOrigText = linkData;
-    $('editPanelContent').innerHTML = `
-        <textarea id="editTextArea" aria-label="Текст"></textarea>
-        <div class="link-section">
-            <label class="field-label" for="editLink"><i class="fas fa-link" style="color:#F40009;"></i> Ссылка при клике на текст (необязательно)</label>
-            <input type="url" id="editLink" placeholder="https://..." autocomplete="off">
-            <div class="link-hint">Оставьте поле пустым, чтобы убрать ссылку с текста.</div>
-        </div>
-        <div class="link-option">
-            <span class="field-label"><i class="fas fa-palette" style="color:#CD853F;"></i> Цвет ссылки</span>
-            <div class="option-group">
-                <label class="radio-label"><input type="radio" name="linkColor" value="inherit"><span class="color-preview inherit">Текущий</span></label>
-                <label class="radio-label"><input type="radio" name="linkColor" value="brown"><span class="color-preview brown">Коричневый</span></label>
-                <label class="radio-label"><input type="radio" name="linkColor" value="lightbrown"><span class="color-preview lightbrown">Светло-коричневый</span></label>
-            </div>
-        </div>
-        <div class="link-option">
-            <span class="field-label"><i class="fas fa-external-link-alt" style="color:#c9a961;"></i> Открывать ссылку</span>
-            <div class="option-group">
-                <label class="radio-label"><input type="radio" name="linkTarget" value="_blank"><span class="target-label">В новой вкладке</span></label>
-                <label class="radio-label"><input type="radio" name="linkTarget" value="_self"><span class="target-label">В том же окне</span></label>
-            </div>
-        </div>
-    `;
-    const ta = $('editTextArea');
-    ta.value = pending['t:' + key] ? pending['t:' + key].value : value.trim();
-    $('editLink').value = linkData.url;
-    const colorRadio = document.querySelector(`input[name="linkColor"][value="${linkData.linkColor}"]`) || document.querySelector('input[name="linkColor"][value="inherit"]');
-    if (colorRadio) colorRadio.checked = true;
-    const targetRadio = document.querySelector(`input[name="linkTarget"][value="${linkData.linkTarget}"]`) || document.querySelector('input[name="linkTarget"][value="_blank"]');
-    if (targetRadio) targetRadio.checked = true;
-    setTimeout(() => ta.focus(), 100);
-}
-
-// ИСПРАВЛЕНО (п.1 Claude): запрет смешанной замены SVG ↔ растр
-// ИСПРАВЛЕНО (п.9 Claude): currentExt обёрнут в esc()
-function openImage(path, src, imgId) {
-    editKind = 'image';
-    editKey = imgId || path;
-    editImagePath = path;
-    pendingImg = null;
-    openPanel('Замена изображения', path);
-    const imgLinkData = readImageLink(editKey, path);
-    editOrigImg = imgLinkData;
-
-    const currentExt = (path.split('.').pop() || '').toLowerCase();
-    const extDisplay = currentExt ? `<code style="background:#2a2a2a;padding:2px 6px;border-radius:3px;font-size:11px;">.${esc(currentExt)}</code>` : '';
-
-    $('editPanelContent').innerHTML = `
-        <div style="margin-bottom: 16px;">
-            <div style="color: #888; font-size: 13px; margin-bottom: 8px;">Текущее фото ${extDisplay}:</div>
-            <img id="curImg" alt="" style="max-width: 100%; max-height: 180px; border-radius: 8px;">
-        </div>
-        <label class="file-upload">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <div class="upload-text"><strong>Выберите новое изображение</strong><br><small>Поддерживаются: JPG, PNG, WebP, GIF, SVG. Максимум 2 МБ. Файл заменит <code style="background:#2a2a2a;padding:1px 5px;border-radius:3px;">${esc(path)}</code>.</small></div>
-            <input type="file" id="imageFileInput" accept="image/*">
-        </label>
-        <div id="imagePreview" style="margin-top: 12px;"></div>
-        <div class="link-section">
-            <label class="field-label" for="imgLink"><i class="fas fa-link" style="color:#F40009;"></i> Ссылка при клике на фото (необязательно)</label>
-            <input type="url" id="imgLink" placeholder="https://..." autocomplete="off">
-            <div class="link-hint">Куда переходить при клике по картинке. Оставьте пустым, чтобы убрать ссылку.</div>
-        </div>
-        <div class="link-option">
-            <span class="field-label"><i class="fas fa-external-link-alt" style="color:#c9a961;"></i> Открывать ссылку</span>
-            <div class="option-group">
-                <label class="radio-label"><input type="radio" name="imgLinkTarget" value="_blank"><span class="target-label">В новой вкладке</span></label>
-                <label class="radio-label"><input type="radio" name="imgLinkTarget" value="_self"><span class="target-label">В том же окне</span></label>
-            </div>
-        </div>
-    `;
-    if (src) $('curImg').src = src;
-    $('imgLink').value = imgLinkData.url;
-    const r = document.querySelector(`input[name="imgLinkTarget"][value="${imgLinkData.linkTarget}"]`) || document.querySelector('input[name="imgLinkTarget"][value="_blank"]');
-    if (r) r.checked = true;
-
-    const IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'image/bmp', 'image/x-icon'];
-
-    $('imageFileInput').addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!IMAGE_TYPES.includes(file.type) && !file.type.startsWith('image/')) {
-            e.target.value = '';
-            return showStatus('Файл должен быть изображением (JPG, PNG, WebP, GIF, SVG)', 'error');
-        }
-
-        if (file.size > 2 * 1024 * 1024) {
-            e.target.value = '';
-            return showStatus('Файл слишком большой (максимум 2 МБ)', 'error');
-        }
-
-        const fileExt = (file.name.split('.').pop() || '').toLowerCase();
-        const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp', 'ico'];
-        if (!ALLOWED_EXTS.includes(fileExt)) {
-            e.target.value = '';
-            return showStatus('Неподдерживаемое расширение файла: .' + fileExt, 'error');
-        }
-
-        // ИСПРАВЛЕНО (п.1 Claude): запрет смешанной замены SVG ↔ растр
-        if ((currentExt === 'svg') !== (fileExt === 'svg')) {
-            e.target.value = '';
-            return showStatus('SVG заменяется только на SVG, растровое фото — только на растровое (JPG/PNG/WebP)', 'error');
-        }
-
-        const rd = new FileReader();
-        rd.onload = ev => {
-            pendingImg = ev.target.result;
-            $('imagePreview').innerHTML = `<div style="color: #00cc66; font-size: 13px;"><i class="fas fa-check-circle"></i> Файл: <strong>${esc(file.name)}</strong> (${(file.size / 1024).toFixed(0)} КБ) — готов к загрузке</div>`;
-        };
-        rd.readAsDataURL(file);
-    });
-}
-
-function applyEdit() {
-    let d = null;
-    try { d = $('siteIframe').contentDocument; } catch {}
-
-    if (editKind === 'text') {
-        const v = $('editTextArea').value;
-        const linkUrl = $('editLink').value.trim();
-        if (!validLinkUrl(linkUrl)) return showStatus('Недопустимая ссылка (разрешены http, https, tel, mailto, #)', 'error');
-        const colorEl = document.querySelector('input[name="linkColor"]:checked');
-        const targetEl = document.querySelector('input[name="linkTarget"]:checked');
-        const linkColor = colorEl ? colorEl.value : 'inherit';
-        const linkTarget = targetEl ? targetEl.value : '_blank';
-        const keepColor = linkColor === 'inherit';
-        const o = editOrigText || { url: '', linkColor: 'inherit', linkTarget: '_blank' };
-        const prev = pending['t:' + editKey];
-        const changed = linkUrl !== o.url || (!!linkUrl && (linkColor !== o.linkColor || linkTarget !== o.linkTarget));
-        const linkChanged = changed || !!(prev && prev.linkChanged);
-        pending['t:' + editKey] = {
-            type: 'text', value: v, link: linkUrl, keepColor, linkColor, linkTarget, linkChanged
-        };
-        if (d) {
-            const el = d.querySelector(`[data-edit="${CSS.escape(editKey)}"]`);
-            if (el) {
-                el.textContent = keepWs(el.textContent, v);
-                if (linkChanged) applyLinkToText(d, el, linkUrl, keepColor, linkColor, linkTarget);
-                if (!linkUrl) syncHref(el, v);
-            }
-        }
-        showStatus((linkUrl ? 'Изменения и ссылка применены.' : 'Изменения применены.') + ' Сохраните в GitHub.');
-    } else if (editKind === 'image') {
-        const imgLinkUrl = $('imgLink').value.trim();
-        if (!validLinkUrl(imgLinkUrl)) return showStatus('Недопустимая ссылка (разрешены http, https, tel, mailto, #)', 'error');
-        const imgTargetEl = document.querySelector('input[name="imgLinkTarget"]:checked');
-        const imgLinkTarget = imgTargetEl ? imgTargetEl.value : '_blank';
-        const o = editOrigImg || { url: '', linkTarget: '_blank' };
-        const prev = pending['i:' + editKey];
-        const changed = imgLinkUrl !== o.url || (!!imgLinkUrl && imgLinkTarget !== o.linkTarget);
-        const linkChanged = changed || !!(prev && prev.linkChanged);
-        const data = pendingImg || (prev && prev.data) || null;
-        if (!data && !linkChanged) return showStatus('Выберите файл или измените ссылку', 'error');
-        const path = editImagePath || editKey;
-        pending['i:' + editKey] = { type: 'image', data, path, key: editKey, link: imgLinkUrl, linkTarget: imgLinkTarget, linkChanged };
-        if (d) {
-            findImgTargets(d, editKey, path).forEach(target => {
-                if (pendingImg) {
-                    const img = target.tagName === 'IMG' ? target : target.querySelector('img');
-                    if (img) {
-                        img.removeAttribute('srcset');
-                        const pic = img.closest('picture');
-                        if (pic) pic.querySelectorAll('source').forEach(s => s.removeAttribute('srcset'));
-                        img.src = pendingImg;
-                    }
-                }
-                if (linkChanged) applyLinkToImage(d, target, imgLinkUrl, imgLinkTarget);
+        // FAQ аккордеон
+        document.querySelectorAll('.faq-question').forEach(question => {
+            question.addEventListener('click', () => {
+                question.parentElement.classList.toggle('active');
             });
-        }
-        if (pendingImg && changed && imgLinkUrl) showStatus('Фото и ссылка применены.');
-        else if (changed && imgLinkUrl) showStatus('Ссылка на фото применена.');
-        else if (pendingImg) showStatus('Фото изменено.');
-        else showStatus('Ссылка с фото убрана.');
-    }
-    markUnsaved();
-    closePanel();
-}
-
-function closePanel() {
-    $('editPanel').classList.remove('active');
-    editKind = editKey = editImagePath = pendingImg = editOrigText = editOrigImg = null;
-    if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch {} }
-    lastFocus = null;
-}
-
-// ИСПРАВЛЕНО (п.5 Claude): правильная формула счётчика сохранённых
-async function saveAll() {
-    const keys = Object.keys(pending);
-    if (!keys.length) return showStatus('Нет изменений для сохранения', 'info');
-    const btn = $('saveBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
-    const done = [], failed = [];
-    try {
-        const texts = keys.filter(k => pending[k].type === 'text');
-        const images = keys.filter(k => pending[k].type === 'image');
-        const imagesWithData = images.filter(k => pending[k].data);
-        const imagesWithLinks = images.filter(k => pending[k].linkChanged);
-
-        if (texts.length || imagesWithLinks.length) {
-            const f = await getFile(currentFile);
-            const doc = new DOMParser().parseFromString(f.text, 'text/html');
-
-            for (const k of texts) {
-                const p = pending[k];
-                const el = doc.querySelector(`[data-edit="${CSS.escape(k.slice(2))}"]`);
-                if (!el) { failed.push(k); continue; }
-                el.textContent = keepWs(el.textContent, p.value);
-                if (p.linkChanged) applyLinkToText(doc, el, p.link || '', p.keepColor || false, p.linkColor || 'inherit', p.linkTarget || '_blank');
-                if (!p.link) syncHref(el, p.value);
-                done.push(k);
-            }
-
-            for (const k of imagesWithLinks) {
-                const { path, link, key, linkTarget } = pending[k];
-                const targets = findImgTargets(doc, key || k.slice(2), path);
-                if (targets.length) targets.forEach(t => applyLinkToImage(doc, t, link, linkTarget || '_blank'));
-                else failed.push(k);
-            }
-
-            const deployId = newDeployId();
-            const stamped = stampDeployId('<!DOCTYPE html>\n' + doc.documentElement.outerHTML, deployId);
-            await putFile(currentFile, b64e(stamped), f.sha, `Редактирование текстов и ссылок в ${currentFile}`);
-            repoDeployId = deployId;
-        }
-
-        for (const k of imagesWithData) {
-            const { path, data } = pending[k];
+        });
+        
+        // Плавная прокрутка
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+        
+        // Cookie баннер: скрываем, если согласие уже дано ранее
+        (function() {
+            const banner = document.getElementById('cookieBanner');
+            const acceptBtn = document.getElementById('cookieAccept');
+            if (!banner || !acceptBtn) return;
+            
+            // Если пользователь уже нажимал "Принять" — прячем баннер
             try {
-                await putFile(path, data.split(',')[1], await getSha(path), `Обновление изображения ${path}`);
-                if (!done.includes(k)) done.push(k);
-            } catch (e) { if (!failed.includes(k)) failed.push(k); }
-        }
+                if (localStorage.getItem('cookieConsent') === 'accepted') {
+                    banner.classList.remove('show');
+                }
+            } catch (e) {
+                // localStorage недоступен (инкогнито) — оставляем баннер видимым
+            }
+            
+            // Кнопка "Принять" — запоминаем и скрываем
+            acceptBtn.addEventListener('click', function() {
+                try { localStorage.setItem('cookieConsent', 'accepted'); } catch (e) {}
+                banner.classList.remove('show');
+            });
+        })();
+    </script>
 
-        imagesWithLinks.forEach(k => { if (!done.includes(k) && !failed.includes(k)) done.push(k); });
 
-        done.filter(k => !failed.includes(k)).forEach(k => delete pending[k]);
-        markUnsaved();
-        if (failed.length) {
-            const successCount = done.filter(k => !failed.includes(k)).length;
-            showStatus(`Сохранено: ${successCount}. Не сохранено: ${failed.length}.`, 'error');
-        } else {
-            showStatus('Сохранено! Ждём деплой GitHub Pages...', 'success');
-            setDeployBadge('pending', '<i class="fas fa-spinner fa-spin"></i> Деплой...');
-            setTimeout(() => { loadSite(true); verifyDeploy(repoDeployId, false); }, 500);
-        }
-    } catch (e) {
-        const i = interpretError(e.status, e.body);
-        showStatus(`✗ ${i.title}. ${i.fix}`, 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Сохранить в GitHub';
-    }
-}
-
-async function resetSite() {
-    if (Object.keys(pending).length && !confirm('Есть несохранённые правки, они будут потеряны. Продолжить?')) return;
-    if (!confirm('Переподготовить страницу ' + currentFile + '? Метки будут обновлены.')) return;
-    pending = {}; markUnsaved();
-    showSetup();
-    $('setupTitle').textContent = 'Переподготовка ' + currentFile;
-    $('progressLog').style.display = 'none';
-    $('errorDetails').innerHTML = '';
-}
-
-$('checkBtn').addEventListener('click', checkToken);
-$('checkBtn2').addEventListener('click', checkToken);
-$('reloadBtn').addEventListener('click', reloadPreview);
-$('cleanBtn').addEventListener('click', cleanMarks);
-$('resetBtn').addEventListener('click', resetSite);
-$('saveBtn').addEventListener('click', saveAll);
-$('logoutBtn').addEventListener('click', logout);
-$('prepareBtn').addEventListener('click', prepareSite);
-$('applyBtn').addEventListener('click', applyEdit);
-$('cancelBtn').addEventListener('click', closePanel);
-$('closePanelBtn').addEventListener('click', closePanel);
-$('homeBtn').addEventListener('click', goHome);
-$('openSiteBtn').addEventListener('click', openLiveSite);
-$('deployBadge').addEventListener('click', () => verifyDeploy(repoDeployId, true));
-
-window.addEventListener('beforeunload', e => { if (Object.keys(pending).length) { e.preventDefault(); e.returnValue = ''; } });
-</script>
-</body>
-</html>
+</body></html>
